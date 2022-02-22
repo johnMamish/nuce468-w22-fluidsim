@@ -6,6 +6,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "simulation.h"
 
@@ -27,10 +28,10 @@ static void set_voxel(fluid_voxel_t* v, const float* u_0, const float rho_0)
     float u2 = ux2 + uy2;
     float u215 = 1.5 * u2;
     v->lattice_vectors[LATTICE_DIR_0] = (4.0 / 9.0) * (1                              - u215);
-    v->lattice_vectors[LATTICE_DIR_N] = (1.0 / 9.0) * (1 + ux3       + 4.5*ux2        - u215);
-    v->lattice_vectors[LATTICE_DIR_S] = (1.0 / 9.0) * (1 - ux3       + 4.5*ux2        - u215);
-    v->lattice_vectors[LATTICE_DIR_E] = (1.0 / 9.0) * (1 + uy3       + 4.5*uy2        - u215);
-    v->lattice_vectors[LATTICE_DIR_W] = (1.0 / 9.0) * (1 - uy3       + 4.5*uy2        - u215);
+    v->lattice_vectors[LATTICE_DIR_E] = (1.0 / 9.0) * (1 + ux3       + 4.5*ux2        - u215);
+    v->lattice_vectors[LATTICE_DIR_W] = (1.0 / 9.0) * (1 - ux3       + 4.5*ux2        - u215);
+    v->lattice_vectors[LATTICE_DIR_N] = (1.0 / 9.0) * (1 + uy3       + 4.5*uy2        - u215);
+    v->lattice_vectors[LATTICE_DIR_S] = (1.0 / 9.0) * (1 - uy3       + 4.5*uy2        - u215);
     v->lattice_vectors[LATTICE_DIR_NE] =(1.0 / 36.0) * (1 + ux3 + uy3 + 4.5*(u2+uxuy2) - u215);
     v->lattice_vectors[LATTICE_DIR_SE] =(1.0 / 36.0) * (1 + ux3 - uy3 + 4.5*(u2-uxuy2) - u215);
     v->lattice_vectors[LATTICE_DIR_NW] =(1.0 / 36.0) * (1 - ux3 + uy3 + 4.5*(u2-uxuy2) - u215);
@@ -47,7 +48,7 @@ static void set_voxel(fluid_voxel_t* v, const float* u_0, const float rho_0)
 void dump_simulation_state(simulation_state_t* ss) {
     for (int y = 0; y < ss->params->ydim; y++) {
         for (int x = 0; x < ss->params->xdim; x++) {
-            printf("%2.1f ", (double)ss->voxels[(y * ss->params->xdim) + x].rho);
+            printf("%6.4f ", (double)ss->voxels[(y * ss->params->xdim) + x].lattice_vectors[1]);
         }
         printf("\n");
     }
@@ -95,13 +96,14 @@ simulation_state_t* simulation_state_create(const simulation_parameters_t* param
     return ss;
 }
 
-static void collide(simulation_state_t* ss)
+static void collide(simulation_state_t* restrict ss)
 {
     const float omega = 1.0 / ((3 * ss->params->viscosity) + 0.5);      // reciprocal of relaxation time
     for (int y = 1; y < (ss->params->ydim - 1); y++) {
         for (int x = 1; x < (ss->params->xdim - 1); x++) {
             fluid_voxel_t* v = index_voxel(ss, x, y);
 
+            //                             0   N   S   E   W  NE  SE  NW  SW
             const static char ux_dirs[] = {0,  0,  0,  1, -1,  1,  1, -1, -1};
             const static char uy_dirs[] = {0,  1, -1,  0,  0,  1, -1,  1, -1};
             float thisrho = 0., thisux = 0., thisuy = 0.;
@@ -167,7 +169,7 @@ static void collide(simulation_state_t* ss)
     }
 }
 
-static void stream(simulation_state_t* ss)
+static void stream(simulation_state_t* restrict ss)
 {
     //float barrierCount = 0, barrierxSum = 0, barrierySum = 0;
     //float barrierFx = 0.0, barrierFy = 0.0;
@@ -204,7 +206,7 @@ static void stream(simulation_state_t* ss)
 
     // now start in the SW corner...
     for (int y = 1; y < (ss->params->ydim - 1); y++) {
-        for (int x=1; x < (ss->params->xdim - 1); x++) {
+        for (int x = 1; x < (ss->params->xdim - 1); x++) {
             fluid_voxel_t* v = index_voxel(ss, x, y);
 
             v->lattice_vectors[LATTICE_DIR_W] = index_voxel(ss, x + 1, y)->lattice_vectors[LATTICE_DIR_W];
@@ -214,42 +216,47 @@ static void stream(simulation_state_t* ss)
 
 #if 1
     // Now handle bounce-back from barriers
-    for (int y = 1; y < (ss->params->ydim - 1); y++) {
-        for (int x = 1; x < (ss->params->xdim - 1); x++) {
-            /*if (barrier[x+y*xdim]) { */
-            if ((x == 60) && (y >= 25) && (y < 75)) {
-                //if (0) {
-                fluid_voxel_t* v = index_voxel(ss, x, y);
+    for (int b = 0; b < ss->num_barriers; b++) {
+        barrier_t* barrier = &ss->barriers[b];
 
-                index_voxel(ss, x + 1, y)->lattice_vectors[LATTICE_DIR_E] = v->lattice_vectors[LATTICE_DIR_W];
-                index_voxel(ss, x - 1, y)->lattice_vectors[LATTICE_DIR_W] = v->lattice_vectors[LATTICE_DIR_E];
-                index_voxel(ss, x, y + 1)->lattice_vectors[LATTICE_DIR_N] = v->lattice_vectors[LATTICE_DIR_S];
-                index_voxel(ss, x, y - 1)->lattice_vectors[LATTICE_DIR_S] = v->lattice_vectors[LATTICE_DIR_N];
+        for (int by = 0; by < barrier->ydim; by++) {
+            for (int bx = 0; bx < barrier->xdim; bx++) {
+                if (barrier->occupancy[by * barrier->xdim + bx]) {
+                    int x = bx + (int)barrier->x;
+                    int y = by + (int)barrier->y;
 
-                index_voxel(ss, x + 1, y + 1)->lattice_vectors[LATTICE_DIR_NE] =
-                    v->lattice_vectors[LATTICE_DIR_SW];
-                index_voxel(ss, x - 1, y + 1)->lattice_vectors[LATTICE_DIR_NW] =
-                    v->lattice_vectors[LATTICE_DIR_SE];
-                index_voxel(ss, x + 1, y - 1)->lattice_vectors[LATTICE_DIR_SE] =
-                    v->lattice_vectors[LATTICE_DIR_NW];
-                index_voxel(ss, x - 1, y - 1)->lattice_vectors[LATTICE_DIR_SW] =
-                    v->lattice_vectors[LATTICE_DIR_NE];
+                    fluid_voxel_t* v = index_voxel(ss, x, y);
 
-                // Keep track of stuff needed to plot force vector:
-                #if 0
-                barrierCount++;
-                barrierxSum += x;
-                barrierySum += y;
-                barrierFx += nE[index] + nNE[index] + nSE[index] - nW[index] - nNW[index] - nSW[index];
-                barrierFy += nN[index] + nNE[index] + nNW[index] - nS[index] - nSE[index] - nSW[index];
-                #endif
+                    index_voxel(ss, x + 1, y)->lattice_vectors[LATTICE_DIR_E] = v->lattice_vectors[LATTICE_DIR_W];
+                    index_voxel(ss, x - 1, y)->lattice_vectors[LATTICE_DIR_W] = v->lattice_vectors[LATTICE_DIR_E];
+                    index_voxel(ss, x, y + 1)->lattice_vectors[LATTICE_DIR_N] = v->lattice_vectors[LATTICE_DIR_S];
+                    index_voxel(ss, x, y - 1)->lattice_vectors[LATTICE_DIR_S] = v->lattice_vectors[LATTICE_DIR_N];
+
+                    index_voxel(ss, x + 1, y + 1)->lattice_vectors[LATTICE_DIR_NE] =
+                        v->lattice_vectors[LATTICE_DIR_SW];
+                    index_voxel(ss, x - 1, y + 1)->lattice_vectors[LATTICE_DIR_NW] =
+                        v->lattice_vectors[LATTICE_DIR_SE];
+                    index_voxel(ss, x + 1, y - 1)->lattice_vectors[LATTICE_DIR_SE] =
+                        v->lattice_vectors[LATTICE_DIR_NW];
+                    index_voxel(ss, x - 1, y - 1)->lattice_vectors[LATTICE_DIR_SW] =
+                        v->lattice_vectors[LATTICE_DIR_NE];
+
+                    // Keep track of stuff needed to plot force vector:
+#if 0
+                    barrierCount++;
+                    barrierxSum += x;
+                    barrierySum += y;
+                    barrierFx += nE[index] + nNE[index] + nSE[index] - nW[index] - nNW[index] - nSW[index];
+                    barrierFy += nN[index] + nNE[index] + nNW[index] - nS[index] - nSE[index] - nSW[index];
+#endif
+                }
             }
         }
+#endif
     }
-    #endif
 }
 
-void step_simulation_state(simulation_state_t* ss)
+void step_simulation_state(simulation_state_t* restrict ss)
 {
     // what happens if we set the boundary conditions every single step...?
     collide(ss);
@@ -271,11 +278,31 @@ bool simulation_state_is_stable(simulation_state_t* ss)
     return true;
 }
 
+/**
+ * File format:
+ * A header which specifies the fields in the raw data section.
+ * Each line of the header should be terminated by a semicolon.
+ * The header ends with the special string "FSIM".
+ *
+ * All data after the letters "FSIM" are packed binary frames that consist of the
+ *    header:
+ *        "<field_0_name>: <field_0_datatype>[<field_0_dimensions>];"
+ *        "<field_1_name>: <field_1_datatype>[<field_1_dimensions>];"
+ *        ....
+ *        "<field_n-1_name>: <field_n-1_datatype>[<field_n-1_dimensions>];"
+ *
+ *    data ():
+ *        "FSIM" frame_0_field_0_data frame_0_field_1_data ... frame_0_field_n-1_data
+ *               frame_1_field_0_data frame_1_field_1
+ */
 int simulation_state_initialize_log_file(FILE* f, simulation_state_t* ss)
 {
-    fprintf(f, "curl: float[%5i, %5i]\r\n", ss->params->xdim, ss->params->ydim);
-    fprintf(f, "density: float[%5i, %5i]\r\n", ss->params->xdim, ss->params->ydim);
-    fprintf(f, "speed: float[%5i, %5i]\r\n", ss->params->xdim, ss->params->ydim);
+    fprintf(f, "curl: f[%5i, %5i];\r\n", ss->params->xdim, ss->params->ydim);
+    fprintf(f, "density: f[%5i, %5i];\r\n", ss->params->xdim, ss->params->ydim);
+    fprintf(f, "speed: f[%5i, %5i];\r\n", ss->params->xdim, ss->params->ydim);
+    fprintf(f, "barriers: ?[%5i, %5i];\r\n", ss->params->xdim, ss->params->ydim);
+    fprintf(f, "FSIM");
+
     return 0;
 }
 
@@ -313,10 +340,63 @@ int simulation_state_append_sim_frame_to_log_file(FILE* f, simulation_state_t* s
         }
     }
 
+    uint8_t* barriers = calloc(dim, sizeof(uint8_t));
+    for (int i = 0; i < ss->num_barriers; i++) {
+        const barrier_t* barr = &ss->barriers[i];
+        for (int by = 0; by < barr->ydim; by++) {
+            for (int bx = 0; bx < barr->xdim; bx++) {
+                int x = barr->x + bx;
+                int y = barr->y + by;
+
+                barriers[(y * ss->params->xdim) + x] |= barr->occupancy[by * barr->xdim + bx];
+            }
+        }
+    }
+
     int succeeded = 1;
     succeeded &= (fwrite(curl, sizeof(float), dim, f) == dim);
     succeeded &= (fwrite(density, sizeof(float), dim, f) == dim);
     succeeded &= (fwrite(speed, sizeof(float), dim, f) == dim);
+    succeeded &= (fwrite(barriers, sizeof(uint8_t), dim, f) == dim);
 
     return succeeded ? 0 : -1;
+}
+
+barrier_t* barrier_create_manual(int xdim, int ydim, int x, int y, const bool* occupancy)
+{
+    barrier_t* barr = calloc(1, sizeof(barrier_t));
+
+    barr->xdim = xdim;
+    barr->ydim = ydim;
+
+    barr->x = x;
+    barr->y = y;
+    barr->x_anchor = x;
+    barr->y_anchor = y;
+    barr->k = 0.0;
+
+    barr->occupancy = calloc(xdim * ydim, sizeof(bool));
+    memcpy(barr->occupancy, occupancy, xdim * ydim * sizeof(bool));
+
+    return barr;
+}
+
+barrier_t* barrier_create_rectangle(int width, int height)
+{
+    barrier_t* barr = NULL;
+    return barr;
+}
+
+void barrier_destroy(barrier_t* barr)
+{
+    free(barr->occupancy);
+    free(barr);
+}
+
+void simulation_state_add_barrier(simulation_state_t* ss, const barrier_t* barr)
+{
+    ss->num_barriers++;
+    ss->barriers = realloc(ss->barriers, ss->num_barriers * sizeof(barrier_t));
+
+    memcpy(&ss->barriers[ss->num_barriers - 1], barr, sizeof(barrier_t));
 }

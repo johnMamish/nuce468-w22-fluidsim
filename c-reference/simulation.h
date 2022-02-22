@@ -2,6 +2,7 @@
 #define _SIMULATION_H
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 
 /**
@@ -48,9 +49,17 @@ typedef struct fluid_voxel {
     float curl;
 } fluid_voxel_t;
 
+/**
+ * Barrier exists entirely
+ */
 typedef struct barrier {
-    int x;
-    int y;
+    int xdim, ydim;
+
+    float x, y;
+    float x_anchor, y_anchor;
+    float k;
+
+    bool* occupancy;
 } barrier_t;
 
 /**
@@ -93,4 +102,13 @@ int simulation_state_initialize_log_file(FILE* f, simulation_state_t* ss);
  */
 int simulation_state_append_sim_frame_to_log_file(FILE* f, simulation_state_t* ss);
 void set_boundary_conditions(simulation_state_t* ss);
+
+barrier_t* barrier_create_manual(int xdim, int ydim, int x, int y, const bool* occupancy);
+barrier_t* barrier_create_rectangle(int width, int height);
+barrier_t* barrier_create_circle(int width, int height);
+
+void barrier_destroy(barrier_t* barr);
+
+void simulation_state_add_barrier(simulation_state_t* ss, const barrier_t* barr);
+
 #endif

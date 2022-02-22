@@ -3,7 +3,7 @@ SOURCES:= main.c
 SOURCES+= simulation.c
 
 all: $(SOURCES)
-	gcc -g -O0 -Wall -std=gnu99 $(SOURCES) -lm -o fluidsim
+	gcc -g -Ofast -ffast-math -Wall -std=gnu99 $(SOURCES) -lm -o fluidsim
 
 clean:
 	rm fluidsim

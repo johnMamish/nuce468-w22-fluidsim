@@ -14,6 +14,7 @@ import struct
 import sys
 import os
 import time
+import mmap
 import matplotlib
 import argparse
 import multiprocessing
@@ -28,12 +29,12 @@ import tempfile
 
 def to_color(frame):
     r = frame.max() - frame.min()
-    if (r < 0.01):
-        r = 0.01
+    if (r < 0.1):
+        r = 0.1
 
     frame = (frame - frame.min()) / r # guarantees all values [0. 1)
     #frame = np.where(np.isnan(frame), 0, frame)
-    frame = (frame / -3) + 1 # map [0, 1) to (1, 2/3]
+    # frame = (frame / -3) + 1 # map [0, 1) to (1, 2/3]
     color_size = list(frame.shape)
     color_size.append(3)
     color_size = tuple(color_size) # adds a third dimension to the frames (for rgb)
@@ -43,10 +44,18 @@ def to_color(frame):
     rgb_vals = (rgb_vals*255).astype(np.uint8)
     return rgb_vals
 
-if __name__ == "__main__":
-    WIDTH = 200
-    HEIGHT = 100
+def boolean_to_bw(frame):
+    color_size = list(frame.shape)
+    color_size.append(3)
+    color_size = tuple(color_size) # adds a third dimension to the frames (for rgb)
+    rgb_vals = np.zeros(color_size)
+    inv = np.invert(frame)
+    rgb_vals[:,:,0] = inv.astype(np.uint8)
+    rgb_vals[:,:,1] = inv.astype(np.uint8)
+    rgb_vals[:,:,2] = inv.astype(np.uint8)
+    return rgb_vals
 
+if __name__ == "__main__":
     ap = argparse.ArgumentParser(description='render binary fluidsim file to video')
 
     ap.add_argument('input_file', type=str)
@@ -54,31 +63,82 @@ if __name__ == "__main__":
 
     args = ap.parse_args()
 
-    sim_file = open(args.input_file, 'rb')
-    next(sim_file)
-    next(sim_file)
-    next(sim_file)
+    # parse "header" from file
+    # memory-map the file, size 0 means whole file
+    sim_file = open(args.input_file, 'r+b')
+    sim_mmap = mmap.mmap(sim_file.fileno(), 0, access=mmap.ACCESS_READ)
+    MAGIC_STR = b'FSIM'
+    headers_end = sim_mmap.find(MAGIC_STR)
+    if (headers_end == -1):
+        print("malformed file, string b\'FSIM\' not found to terminate headers")
+        sys.exit(-1)
+
+    # Very sloppy parsing
+    header_strings = [h.strip() for h in sim_mmap[0:headers_end].split(b';')]
+    headers = []
+    for hb in header_strings:
+        if b':' not in hb:
+            continue
+
+        hs = hb.decode('utf-8')
+        name = hs.split(':')[0]
+        datatype = hs.split(':')[1].strip()[0]
+
+        # super hacky; not trying to write a compiler here
+        dimstr = hs.split(':')[1].strip()[1:]
+        dimstart = dimstr.find('[')
+        dimend = dimstr.find(']')
+        dimstr = dimstr[dimstart:dimend]
+        dims = [int(d) for d in dimstr[1:].split(',')]
+
+        headers.append((name, datatype, dims))
+
+    print("Found headers: ")
+    for h in headers:
+        print(f"{h[0]}: {h[1]} {h[2]}")
+    print()
+
+    WIDTH = headers[0][2][0]
+    HEIGHT = headers[0][2][1]
 
     # fourcc = cv2.VideoWriter_fourcc(*"XVID")
     fourcc = cv2.VideoWriter_fourcc('p', 'n', 'g', ' ')
+    video = cv2.VideoWriter(args.output_file, fourcc, 40.0, (WIDTH, HEIGHT))
 
-    video = cv2.VideoWriter(args.output_file, fourcc, 20.0, (WIDTH, HEIGHT))
+    # skip headers
+    sim_file.read(headers_end + len(MAGIC_STR))
 
-    i = 0
-    for chunk in iter(partial(sim_file.read, 3 * WIDTH * HEIGHT * 4), b''):
-        print(f"writing frame {i}\r", end='')
+    # size of each frame
+    field_decode_strs = []
+    field_sizes = []
+    frame_size = 0
+    for field in headers:
+        field_decode_str = field[1]*(field[2][0] * field[2][1])
+        field_decode_strs.append(field_decode_str)
+        field_sizes.append(struct.calcsize(field_decode_str))
+
+    print(f"each frame is calculated to be {sum(field_sizes)} bytes")
+
+    frame_count = 0
+    for chunk in iter(partial(sim_file.read, sum(field_sizes)), b''):
+        print(f"writing frame {frame_count}\r", end='')
 
         # Read array of floats
         FRAME_LEN = WIDTH*HEIGHT*4
         offs = 0
-        curl = np.array(struct.unpack('f'*(WIDTH*HEIGHT), chunk[FRAME_LEN*(offs):FRAME_LEN*(offs + 1)])).reshape((HEIGHT,WIDTH))
-        print(curl)
+
+        frame_data = {}
+        data_offset = 0
+        for i in range(len(headers)):
+            field_name = headers[i][0]
+            subchunk = chunk[data_offset:data_offset + field_sizes[i]]
+            frame_data[field_name] = np.array(struct.unpack(field_decode_strs[i], subchunk)).reshape(HEIGHT, WIDTH)
+            data_offset += field_sizes[i]
 
         # Turn it into a picture and write it to the frame
-        frame = to_color(curl)
-
+        frame = (to_color(frame_data['curl']) * boolean_to_bw(frame_data['barriers'])).astype(np.uint8)
         video.write(frame)
 
-        i = i + 1
-
+        frame_count += 1
+    print()
     video.release()
