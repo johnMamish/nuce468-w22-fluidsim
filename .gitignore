@@ -1,0 +1,5 @@
+# Compilation results
+out/
+
+# Library files
+lib/build

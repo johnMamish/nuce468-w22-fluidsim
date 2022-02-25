@@ -2,10 +2,13 @@ SOURCES:= main.c
 #SOURCES+= ../external/cJSON/cJSON.c
 SOURCES+= simulation.c
 
+INCLUDE := ../lib/build/include/json-c
+
 all: $(SOURCES)
-	gcc -g -Ofast -ffast-math -Wall -std=gnu99 $(SOURCES) -lm -o fluidsim
+	-mkdir -p ../out
+	gcc -g -Ofast -ffast-math -Wall -std=gnu99 -I${INCLUDE} $(SOURCES) -lm -o ../out/fluidsim
 
 clean:
-	rm fluidsim
+	-rm fluidsim
 
 .PHONY: clean

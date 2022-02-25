@@ -1,0 +1,4 @@
+[submodule "lib/json-c-0.15"]
+	path = lib/json-c-0.15
+	url = git@github.com:json-c/json-c.git
+	branch = json-c-0.15

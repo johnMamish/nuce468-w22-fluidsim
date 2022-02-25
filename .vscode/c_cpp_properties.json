@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "name": "Linux (c reference)",
+            "includePath": [
+                "${workspaceFolder}/lib/json-c",
+                "${workspaceFolder}/c-reference"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/clang-6.0",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "linux-clang-x64"
+        },
+        {
+            "name": "Linux (CUDA Implementation)",
+            "includePath": [
+                "${workspaceFolder}/lib/json-c",
+                "${workspaceFolder}/c-reference"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/local/cuda/bin/nvcc",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "linux-clang-x64"
+        }
+    ],
+    "version": 4
+}
