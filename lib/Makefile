@@ -1,9 +1,4 @@
-.SILENT:
-TC_NOTIF=\033[38;5;207m
-TC_CLEAN=\033[38;5;006m
-TC_BUILD=\033[35;5;123mBUILD:
-TC_RUN=\033[35;5;202mRUN:
-TC_END=\033[0m
+include ../common.make
 
 all: build/tmp/json-c
 

@@ -1,5 +1,5 @@
-# Compilation results
+# Compilation results and intermediates
 out/
-
-# Library files
+build/
+cuda/build
 lib/build

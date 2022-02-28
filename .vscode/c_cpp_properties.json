@@ -3,8 +3,9 @@
         {
             "name": "Linux (c reference)",
             "includePath": [
-                "${workspaceFolder}/lib/json-c",
-                "${workspaceFolder}/c-reference"
+                "${workspaceFolder}/lib/build/include/**",
+                "${workspaceFolder}/c-reference",
+                "${workspaceFolder}/cuda/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang-6.0",
@@ -15,8 +16,9 @@
         {
             "name": "Linux (CUDA Implementation)",
             "includePath": [
-                "${workspaceFolder}/lib/json-c",
-                "${workspaceFolder}/c-reference"
+                "${workspaceFolder}/lib/build/include/**",
+                "${workspaceFolder}/c-reference",
+                "${workspaceFolder}/cuda/include"
             ],
             "defines": [],
             "compilerPath": "/usr/local/cuda/bin/nvcc",

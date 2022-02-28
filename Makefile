@@ -1,25 +1,21 @@
-.SILENT:
-.PHONY: c-reference cuda clean libs all
 
-TC_NOTIF=\033[38;5;207m
-TC_CLEAN=\033[38;5;006m
-TC_BUILD=\033[35;5;123m
-TC_RUN=\033[35;5;202mRUN:
-TC_END=\033[0m
+include common.make
+
+.PHONY: c-reference cuda clean libs all
 
 all: c-reference cuda
 
 libs:
 	echo "${TC_NOTIF}Building libraries${TC_END}"
-	cd lib && make all
+	make all -C lib
 
 c-reference: libs
 	echo "${TC_NOTIF}Building module 'c-reference'${TC_END}"
-	cd c-reference && make all
+	make all -C c-reference
 
 cuda: libs
 	echo "${TC_NOTIF}Building module 'cuda'${TC_END}"
-	echo "not yet implemented"
+	make all -C cuda
 
 test: test-c-reference test-cuda
 
@@ -37,7 +33,8 @@ test-c-reference: c-reference
 
 clean:
 	echo "${TC_CLEAN}Cleaning modules${TC_END}"
-	cd c-reference && make clean
+	make clean -C c-reference
+	make clean -C cuda
 	-rm -r out
 
 libs-clean:
