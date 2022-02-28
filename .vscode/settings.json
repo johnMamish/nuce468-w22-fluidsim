@@ -1,3 +1,7 @@
 {
-    "cmake.configureOnOpen": false
+    "cmake.configureOnOpen": false,
+    "files.associations": {
+        "argp.h": "c",
+        "handle_args.h": "c"
+    }
 }

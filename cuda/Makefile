@@ -8,7 +8,8 @@ MODULE_BASE := .
 
 TARGET = fluidsim-gpu
 
-CC := nvcc
+LNCC := nvcc
+CC := gcc
 CUC := nvcc
 CFLAGS := -g
 CUFLAGS := -g
@@ -17,7 +18,7 @@ OUT = ${PROJ_BASE}/out
 BUILD = ${MODULE_BASE}/build
 INCLUDE= ${MODULE_BASE}/include
 
-MODULES := src src/sim
+MODULES := src src/sim src/io
 
 INCS = $(wildcard *.h $(foreach fd, $(shell find ${INCLUDE} -type d), $(fd)/*.h))
 C_SRCS = $(wildcard *.c $(foreach fd, $(MODULES), $(fd)/*.c))
@@ -41,8 +42,8 @@ ${OUT}:
 
 PHONY := $(TARGET)
 $(TARGET): $(OBJS)
-	echo "${TC_LINK} $(CC) -o $(OUT)/$@ $(OBJS) $(LIB_DIRS) $(LIBS)${TC_END}"
-	$(CC) -o $(OUT)/$@ $(OBJS) $(LIB_DIRS) $(LIBS)
+	echo "${TC_LINK} $(LNCC) -o $(OUT)/$@ $(OBJS) $(LIB_DIRS) $(LIBS)${TC_END}"
+	$(LNCC) -o $(OUT)/$@ $(OBJS) $(LIB_DIRS) $(LIBS)
 
 $(BUILD)/%_cc.o: %.c $(INCS)
 	echo "${TC_BUILD}$(CC) -o $@ $(CFLAGS) -c $<${TC_END}"
