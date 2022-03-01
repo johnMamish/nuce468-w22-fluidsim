@@ -5,21 +5,36 @@
 
 #include <io/handle_args.h>
 
-    const int NUM_VEC_FORMATS_INT = 4;
-    const char* VEC_FORMATS_INT[] = {
-        "(%i, %i)", // <-- This is the most correct one
-        "(%i,%i)",
-        "%i, %i",
-        "%i,%i"
-    };
+static char argp_doc[] = "Lattice-Boltzmann 2D Fluid Simulator";
+static char argp_args_doc[] = "";
 
-    const int NUM_VEC_FORMATS_FLOAT = 4;
-    const char* VEC_FORMATS_FLOAT[] = {
-        "(%f, %f)", // <-- This is the most correct one
-        "(%f,%f)",
-        "%f, %f",
-        "%f,%f"
-    };
+static struct argp_option options[] = {
+    {"run-len", 'l', "frames", 0, "Number of frames to run the simulator for."},
+    {"config-file", 'c', "cfile", 0, "Location of a json-formatted config file to read simulation parameters from. If not provided, default parameters will be used (except when overridden by CLI options)."},
+    {"output", 'o', "ofile", 0, "File to write output data to. By default, this will overwrite any existing file (but see `--append`). If not provided, results will be output to STDOUT."},
+    {"append", 'a', 0, 0, "If provided, results will be APPENDED to `output` if the file exists, instead of overwriting the file."},
+    {0, 0, 0, OPTION_DOC, "SIMULATION PARAMETERS:"},
+    {"dims", 'd', "(xDim, yDim)", 0, "Set the dimensions of the simulation."},
+    {"boundary", 'b', "(xVel, yVel)", 0, "Set the 'boundary velocity' vector of the simulation."},
+    {"viscosity", 'v', "viscosity", 0, "Set the viscosity of the simulation fluid"},
+    {0}
+};
+
+const int NUM_VEC_FORMATS_INT = 4;
+const char* VEC_FORMATS_INT[] = {
+    "(%i, %i)", // <-- This is the most correct one
+    "(%i,%i)",
+    "%i, %i",
+    "%i,%i"
+};
+
+const int NUM_VEC_FORMATS_FLOAT = 4;
+const char* VEC_FORMATS_FLOAT[] = {
+    "(%f, %f)", // <-- This is the most correct one
+    "(%f,%f)",
+    "%f, %f",
+    "%f,%f"
+};
 
 static inline error_t _parse_int_vector(const char* str, int* x, int* y){
     int res = EOF;

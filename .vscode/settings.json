@@ -1,7 +1,11 @@
 {
     "cmake.configureOnOpen": false,
     "files.associations": {
+        "*.cu": "c",
         "argp.h": "c",
-        "handle_args.h": "c"
+        "handle_args.h": "c",
+        "sim.h": "c",
+        "stdlib.h": "c",
+        "cuda.h": "c"
     }
 }
