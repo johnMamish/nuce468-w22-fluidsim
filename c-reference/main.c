@@ -14,6 +14,7 @@
  */
 
 #include <stdio.h>
+#include <json.h>
 
 #include "simulation.h"
 

@@ -1,0 +1,5 @@
+# Compilation results and intermediates
+out/
+build/
+cuda/build
+lib/build
