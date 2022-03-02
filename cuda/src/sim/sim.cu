@@ -173,6 +173,10 @@ FluidsimError_t syncSimStateToHost(SimState_t* h_onHost){
     return _simStateCopyToHost(h_onHost->d_deviceStatePtr, h_onHost);
 }
 
+FluidsimError_t syncSimStateToDevice(SimState_t* h_onHost){
+    return _simStateCopyToDevice(h_onHost->d_deviceStatePtr, h_onHost);
+}
+
 FluidsimError_t doFrame(Kernel_t kernel, SimState_t* sim){
     // Set up CUDA environment
     dim3 dimGrid = {

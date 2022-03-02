@@ -54,38 +54,33 @@ __global__ void InitializerKernel(SimState_t* state){
         FluidVoxel_t* v = index_voxel(state, myX, myY);
         _setVoxel(
             v, 
-            (float)myX,
-            (float)myY*-1.0f,
+            state->params.boundary_velocity.x,
+            state->params.boundary_velocity.y,
             1.0
         );
-        // _setVoxel(
-        //     v, 
-        //     state->params.boundary_velocity.x,
-        //     state->params.boundary_velocity.y,
-        //     1.0
-        // );
         v->curl = 0.0;
+        v->is_barrier = false;
     }
 }
 
 __global__ void NaiveKernel(KERNEL_PARAMS){
     // Right now, the kernel just displays a test pattern
-    int myX = blockIdx.x * blockDim.x + threadIdx.x;
-    int myY = blockIdx.y * blockDim.y + threadIdx.y;
+    // int myX = blockIdx.x * blockDim.x + threadIdx.x;
+    // int myY = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if(myX < state->params.dims.x && myY < state->params.dims.y){
-        FluidVoxel_t* v = index_voxel(state, myX, myY);
-        if(myY*state->params.dims.x + myX <= 5*state->frame){
-            _setVoxel(
-                v, 
-                (float)myY,
-                (float)myX,
-                1.0
-            );
-        }
-    }
-    int frame = state->frame;
-    __syncthreads();
-    state->frame = frame + 1;
+    // if(myX < state->params.dims.x && myY < state->params.dims.y){
+    //     FluidVoxel_t* v = index_voxel(state, myX, myY);
+    //     if(myY*state->params.dims.x + myX <= 5*state->frame){
+    //         _setVoxel(
+    //             v, 
+    //             (float)myY,
+    //             (float)myX,
+    //             1.0
+    //         );
+    //     }
+    // }
+    // int frame = state->frame;
+    // __syncthreads();
+    // state->frame = frame + 1;
 }
 

@@ -1,6 +1,21 @@
 #pragma once
 
+#include <stdbool.h>
+
 #define TILE_WIDTH 32
+
+/**
+ * @brief Simple structs to represent a point in 2D space
+ */
+typedef struct IntPoint {
+    int x, y;
+} IntPoint_t;
+/**
+ * @brief Simple structs to represent a point in 2D space
+ */
+typedef struct FloatPoint {
+    float x, y;
+} FloatPoint_t;
 
 /**
  * @brief Statically-defined simulation parameters.
@@ -11,8 +26,8 @@
  * @param viscosity Viscosity of the fluid
  */
 typedef struct SimParams {
-    struct {int x; int y;} dims;
-    struct {float x; float y;} boundary_velocity;
+    IntPoint_t dims;
+    FloatPoint_t boundary_velocity;
     float viscosity;
 } SimParams_t;
 
@@ -33,7 +48,7 @@ typedef struct FluidVoxel {
               northeast, southeast, northwest, southwest;
         } lattice_vectors;
     float density;
-    struct {float x, y;} velocity;
+    FloatPoint_t velocity;
     float curl;
     bool is_barrier;
 } FluidVoxel_t;

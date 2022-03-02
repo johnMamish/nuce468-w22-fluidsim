@@ -17,6 +17,8 @@ const char* fluidsim_err_to_str(const FluidsimError_t err){
             return "FSE_NULL_PTR";
         case FSE_FILE_IO_FAILURE:
             return "FSE_FILE_IO_FAILURE";
+        case FSE_OUT_OF_BOUNDS:
+            return "FSE_OUT_OF_BOUNDS";
         case FSE_ASSERTION_FAILURE:
             return "FSE_ASSERTION_FAILURE";
     }
@@ -41,12 +43,40 @@ void _fluidsim_error_exit_macro(FluidsimError_t err, int line, const char* file,
     exit((int)err);
 }
 
+void _fluidsim_error_noexit_macro(FluidsimError_t err, int line, const char* file, const char* func, const char* format, ...){
+    va_list printf_keys;
+    va_start(printf_keys, format);
+
+    fprintf(stderr, 
+        "[in %s on %s line %d] ERROR<ignored> %d (%s): ", 
+        func, file, line, 
+        (int)err, fluidsim_err_to_str(err)
+    );
+    vfprintf(stderr, format, printf_keys);
+    fprintf(stderr, "\n");
+
+    va_end(printf_keys);
+}
+
+static inline void vfluidsim_print_error(FluidsimError_t err, const char* format, va_list args){
+    fprintf(stderr, "ERROR %d (%s): ", (int)err, fluidsim_err_to_str(err));
+    vfprintf(stderr, format, args);
+}
+
+void fluidsim_error_noexit(FluidsimError_t err, const char* format, ...){
+    va_list printf_keys;
+    va_start(printf_keys, format);
+
+    vfluidsim_print_error(err, format, printf_keys);
+
+    va_end(printf_keys);
+}
+
 void fluidsim_error_exit(FluidsimError_t err, const char* format, ...){
     va_list printf_keys;
     va_start(printf_keys, format);
 
-    fprintf(stderr, "ERROR %d (%s): ", (int)err, fluidsim_err_to_str(err));
-    vfprintf(stderr, format, printf_keys);
+    vfluidsim_print_error(err, format, printf_keys);
 
     va_end(printf_keys);
 
