@@ -1,5 +1,7 @@
 #pragma once
 
+#define TILE_WIDTH 32
+
 /**
  * @brief Statically-defined simulation parameters.
  * 
@@ -35,6 +37,7 @@ typedef struct FluidVoxel {
     float curl;
     bool is_barrier;
 } FluidVoxel_t;
+#define NUM_LATTICE_VECTORS 9
 
 /**
  * @brief Simulation state information
@@ -50,9 +53,10 @@ typedef struct SimState {
     int frame;
     SimParams_t   params;
     FluidVoxel_t* voxels;
+    struct SimState* d_deviceStatePtr;
 } SimState_t;
 
-#define KERNEL_PARAMS SimState_t state
+#define KERNEL_PARAMS SimState_t* state
 
 typedef void (*Kernel_t)(KERNEL_PARAMS);
 

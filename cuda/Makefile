@@ -43,7 +43,7 @@ ${OUT}:
 	-mkdir -p ${OUT}
 
 PHONY := $(TARGET)
-$(TARGET): $(OBJS)
+$(TARGET): $(OBJS) ${OUT}
 	echo "${TC_LINK} $(LNCC) -o $(OUT)/$@ $(OBJS) $(LIB_DIRS) $(LIBS)${TC_END}"
 	$(LNCC) -o $(OUT)/$@ $(OBJS) $(LIB_DIRS) $(LIBS)
 

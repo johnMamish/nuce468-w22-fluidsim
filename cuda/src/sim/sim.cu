@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include <io/error.h>
+#include <io/error_cu.h>
 #include <sim/kernel.h>
 #include <sim/sim.h>
 
@@ -69,17 +70,19 @@ FluidsimError_t _simStateCopyToDevice(SimState_t* d_onDevice, SimState_t* h_onHo
 }
 
 FluidsimError_t _simStateCopyToHost(SimState_t* d_onDevice, SimState_t* h_onHost){
-    // Preserve host voxel-array address
+    // Preserve host voxel-array address and device-state pointer
     FluidVoxel_t* h_arr = h_onHost->voxels;
+    SimState_t* d_hostDevPtr = h_onHost->d_deviceStatePtr;
 
     // Copy base struct
     cudaMemcpy(h_onHost, d_onDevice, sizeof(SimState_t), cudaMemcpyDeviceToHost);
 
-    // Preserve device voxel-array address
+    // Preserve device voxel-array
     FluidVoxel_t* d_arr = h_onHost->voxels;
 
-    // Restore host voxel-array address
+    // Restore host voxel-array address and device-state pointer
     h_onHost->voxels = h_arr;
+    h_onHost->d_deviceStatePtr = d_hostDevPtr;
 
     // Copy voxel array
     size_t arrayLen = h_onHost->params.dims.x * 
@@ -90,9 +93,23 @@ FluidsimError_t _simStateCopyToHost(SimState_t* d_onDevice, SimState_t* h_onHost
     return FSE_OK;
 }
 
-FluidsimError_t initSimState(SimParams_t params, SimState_t* toInit){
-    toInit->params = params;
-    toInit->frame = 0;
+FluidsimError_t _simStateFreeOnDevice(SimState_t* d_onDevice){
+    // Retrieve data (we need the array pointer from here)
+    SimState_t h_onDevice;
+    cudaMemcpy(&h_onDevice, d_onDevice, sizeof(SimState_t), cudaMemcpyDeviceToHost);
+
+    // Free voxel array
+    cudaFree(h_onDevice.voxels);
+
+    // Free the struct itself
+    cudaFree(d_onDevice);
+    return FSE_OK;
+}
+
+FluidsimError_t initSimState(SimParams_t params, SimState_t* h_toInit){
+    // Initialize locally
+    h_toInit->params = params;
+    h_toInit->frame = 0;
 
     int arrSize = params.dims.x*params.dims.y*sizeof(FluidVoxel_t);
     
@@ -102,16 +119,78 @@ FluidsimError_t initSimState(SimParams_t params, SimState_t* toInit){
         return FSE_MALLOC_FAILED;
     }
 
-    toInit->voxels = voxels;
+    h_toInit->voxels = voxels;
+
+    // Initialize on device
+    SimState_t* d_onDevice = NULL;
+    FluidsimError_t err = _simStateAllocOnDevice(&d_onDevice, params);
+    if(err != FSE_OK) return err;
+
+    // Copy to device
+    err = _simStateCopyToDevice(d_onDevice, h_toInit);
+    if(err != FSE_OK) return err;
+
+    // Set device pointer
+    h_toInit->d_deviceStatePtr = d_onDevice;
+
+    // Set up CUDA environment
+    dim3 dimGrid = {
+        (unsigned int)((h_toInit->params.dims.x + TILE_WIDTH - 1) / TILE_WIDTH), 
+        (unsigned int)((h_toInit->params.dims.y + TILE_WIDTH - 1) / TILE_WIDTH)
+    };
+    dim3 dimBlock = {
+        TILE_WIDTH,
+        TILE_WIDTH
+    };
+
+    // Launch initialization kernel
+    InitializerKernel<<<dimGrid, dimBlock>>>(d_onDevice);
+
+    // Check for errors
+    fseCuChk(cudaPeekAtLastError());
+    fseCuChk(cudaDeviceSynchronize());
+
     return FSE_OK;
 }
 
 FluidsimError_t destroySimState(SimState_t* toDestroy){
+    // Avoid duplicate frees
+    if(toDestroy->d_deviceStatePtr == NULL) return FSE_NULL_PTR;
+
+    // Free device memory (the entire struct)
+    FluidsimError_t res = _simStateFreeOnDevice(toDestroy->d_deviceStatePtr);
+    toDestroy->d_deviceStatePtr = NULL;
+
+    // Free local memory (just the voxel array)
     free(toDestroy->voxels);
+
+    if(res != FSE_OK) return res;
+
     return FSE_OK;
 }
 
+FluidsimError_t syncSimStateToHost(SimState_t* h_onHost){
+    return _simStateCopyToHost(h_onHost->d_deviceStatePtr, h_onHost);
+}
+
 FluidsimError_t doFrame(Kernel_t kernel, SimState_t* sim){
+    // Set up CUDA environment
+    dim3 dimGrid = {
+        (unsigned int)((sim->params.dims.x + TILE_WIDTH - 1) / TILE_WIDTH), 
+        (unsigned int)((sim->params.dims.y + TILE_WIDTH - 1) / TILE_WIDTH)
+    };
+    dim3 dimBlock = {
+        TILE_WIDTH,
+        TILE_WIDTH
+    };
+
+    // Launch kernel
+    kernel<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
+
+    // Check for errors
+    fseCuChk(cudaPeekAtLastError());
+    fseCuChk(cudaDeviceSynchronize());
+
     return FSE_OK;
 }
 

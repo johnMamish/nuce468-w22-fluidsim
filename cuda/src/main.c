@@ -33,6 +33,7 @@ int main(int argc, char** argv){
     Kernel_t k = FluidsimKernels.naive;
     for(int i = 0; i < cArgs.frames; ++i){
         fseChk(doFrame(k, &state), "Failure calculating frame %d", i);
+        fseChk(syncSimStateToHost(&state), "Failure synchronizing state to host on frame %d", i);
         fseChk(
             writeLogFrame(simFile, &state),
             "Failure writing frame %d to log file", i

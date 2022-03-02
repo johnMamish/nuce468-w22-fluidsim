@@ -181,7 +181,7 @@ error_t get_args(CLIArgs_t* args, int argc, char** argv){
 #define MODSTR(args, key) (args -> modified.key ? PA_MOD : PA_NOMOD)
 
 void print_args(CLIArgs_t* args){
-    printf("Simulation length: %d frames%s\nConfig file: %s%s\nOutput file: %s%s\n  -> Append: %s%s\nSimulation Parameters:\n  -> Dimensions: (%d, %d)%s\n  -> Boundary Velocity: (%.3f, %.3f)%s\n  -> Fluid Viscosity: %.3f%s\n",
+    fprintf(stderr, "Simulation length: %d frames%s\nConfig file: %s%s\nOutput file: %s%s\n  -> Append: %s%s\nSimulation Parameters:\n  -> Dimensions: (%d, %d)%s\n  -> Boundary Velocity: (%.3f, %.3f)%s\n  -> Fluid Viscosity: %.3f%s\n",
         args -> frames     , MODSTR(args, frames),
         args -> config_file, MODSTR(args, config_file),
         args -> output_file, MODSTR(args, output_file),

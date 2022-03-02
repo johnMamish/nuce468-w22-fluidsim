@@ -7,6 +7,7 @@
 #endif
 
 __global__ void NaiveKernel(KERNEL_PARAMS);
+__global__ void InitializerKernel(SimState_t* state);
 
 const KernelList_t FluidsimKernels = {
     .naive = NaiveKernel
