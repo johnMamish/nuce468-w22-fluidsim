@@ -25,17 +25,17 @@ __device__ void _setVoxel(FluidVoxel_t* v, float xVel, float yVel, float density
     float crnr_mag = 1.0/36.0;
 
     // Calculate lattice vectors
-    v->lattice_vectors.zero = zero_mag*(1 - u_squared_times_150pct) * density;
+    v->lattice_vectors.named.zero = zero_mag*(1 - u_squared_times_150pct) * density;
 
-    v->lattice_vectors.east  = nesw_mag*(1 + ux_times_3 + 4.5*ux_squared - u_squared_times_150pct) * density;
-    v->lattice_vectors.west  = nesw_mag*(1 - ux_times_3 + 4.5*ux_squared - u_squared_times_150pct) * density;
-    v->lattice_vectors.north = nesw_mag*(1 + uy_times_3 + 4.5*uy_squared - u_squared_times_150pct) * density;
-    v->lattice_vectors.south = nesw_mag*(1 - uy_times_3 + 4.5*uy_squared - u_squared_times_150pct) * density;
+    v->lattice_vectors.named.east  = nesw_mag*(1 + ux_times_3 + 4.5*ux_squared - u_squared_times_150pct) * density;
+    v->lattice_vectors.named.west  = nesw_mag*(1 - ux_times_3 + 4.5*ux_squared - u_squared_times_150pct) * density;
+    v->lattice_vectors.named.north = nesw_mag*(1 + uy_times_3 + 4.5*uy_squared - u_squared_times_150pct) * density;
+    v->lattice_vectors.named.south = nesw_mag*(1 - uy_times_3 + 4.5*uy_squared - u_squared_times_150pct) * density;
 
-    v->lattice_vectors.northeast = crnr_mag*(1 + ux_times_3 + uy_times_3 + 4.5*(u_squared + ux_times_uy_times_2) - u_squared_times_150pct) * density;
-    v->lattice_vectors.southeast = crnr_mag*(1 + ux_times_3 - uy_times_3 + 4.5*(u_squared - ux_times_uy_times_2) - u_squared_times_150pct) * density;
-    v->lattice_vectors.northwest = crnr_mag*(1 - ux_times_3 + uy_times_3 + 4.5*(u_squared - ux_times_uy_times_2) - u_squared_times_150pct) * density;
-    v->lattice_vectors.southwest = crnr_mag*(1 - ux_times_3 - uy_times_3 + 4.5*(u_squared + ux_times_uy_times_2) - u_squared_times_150pct) * density;
+    v->lattice_vectors.named.northeast = crnr_mag*(1 + ux_times_3 + uy_times_3 + 4.5*(u_squared + ux_times_uy_times_2) - u_squared_times_150pct) * density;
+    v->lattice_vectors.named.southeast = crnr_mag*(1 + ux_times_3 - uy_times_3 + 4.5*(u_squared - ux_times_uy_times_2) - u_squared_times_150pct) * density;
+    v->lattice_vectors.named.northwest = crnr_mag*(1 - ux_times_3 + uy_times_3 + 4.5*(u_squared - ux_times_uy_times_2) - u_squared_times_150pct) * density;
+    v->lattice_vectors.named.southwest = crnr_mag*(1 - ux_times_3 - uy_times_3 + 4.5*(u_squared + ux_times_uy_times_2) - u_squared_times_150pct) * density;
 
     // Copy over other values
     v->density = density;
@@ -64,23 +64,11 @@ __global__ void InitializerKernel(SimState_t* state){
 }
 
 __global__ void NaiveKernel(KERNEL_PARAMS){
-    // Right now, the kernel just displays a test pattern
-    // int myX = blockIdx.x * blockDim.x + threadIdx.x;
-    // int myY = blockIdx.y * blockDim.y + threadIdx.y;
 
-    // if(myX < state->params.dims.x && myY < state->params.dims.y){
-    //     FluidVoxel_t* v = index_voxel(state, myX, myY);
-    //     if(myY*state->params.dims.x + myX <= 5*state->frame){
-    //         _setVoxel(
-    //             v, 
-    //             (float)myY,
-    //             (float)myX,
-    //             1.0
-    //         );
-    //     }
-    // }
-    // int frame = state->frame;
-    // __syncthreads();
-    // state->frame = frame + 1;
+    // Get pixel ID
+    int myX = blockIdx.x * blockDim.x + threadIdx.x;
+    int myY = blockIdx.y * blockDim.y + threadIdx.y;
+
+    // if myX
 }
 

@@ -31,11 +31,12 @@ typedef struct SimParams {
     float viscosity;
 } SimParams_t;
 
+#define NUM_LATTICE_VECTORS 9
 /**
  * @brief A single voxel (actually a pixel since we're in 2D) of fluid.
  *
- * @param lattice_vectors Density in each individual lattice direction (see
- *                        LatticeDirection_t)
+ * @param lattice_vectors The lattice vectors, accessible by array or named
+ *                        struct
  * @param density The overall density of the fluid at this point. 1D.
  * @param velocity The overall velocity of the fluid at this point. 2D.
  * @param curl The rotational motion, or "curl", of the fluid at this point. 1D.
@@ -43,16 +44,27 @@ typedef struct SimParams {
  *                   flow of fluid.
  */
 typedef struct FluidVoxel {
-    struct {
-        float zero, north, south, east, west,
-              northeast, southeast, northwest, southwest;
-        } lattice_vectors;
+    /**
+     * @brief Makes the lattice vector array accessible via two schemes. Note
+     *        that both subfields of this field refer to the SAME DATA, just by
+     *        two different methods of access.
+     * 
+     * @param named The individual vectors accessible by name
+     * @param sequence The vectors as an array, which can easily be iterated
+     *                 over
+     */
+    union{
+        struct __attribute__((__packed__)) {
+            float zero, north, south, east, west,
+                northeast, southeast, northwest, southwest;
+        } named;
+        float sequence[NUM_LATTICE_VECTORS];
+    }lattice_vectors;
     float density;
     FloatPoint_t velocity;
     float curl;
     bool is_barrier;
 } FluidVoxel_t;
-#define NUM_LATTICE_VECTORS 9
 
 /**
  * @brief Simulation state information
