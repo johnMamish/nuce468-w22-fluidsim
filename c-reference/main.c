@@ -14,7 +14,7 @@
  */
 
 #include <stdio.h>
-#include <json.h>
+#include "json.h"
 
 #include "simulation.h"
 
@@ -58,7 +58,7 @@ int main(int argc, char** argv)
     barrier_t* circle_barrier = barrier_create_manual(10, 10, 30, 45, circle_barrier_occupancy);
     simulation_state_add_barrier(sim, circle_barrier);
 
-    #if 0
+#if 0
     bool linefoo[] = {
         true, true, true, true, true, true, true, true,
         true, true, true, true, true, true, true, true,

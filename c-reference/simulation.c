@@ -10,6 +10,13 @@
 
 #include "simulation.h"
 
+static inline float clamp_f(float f, float min, float max)
+{
+    if (f < min) return min;
+    if (f > max) return max;
+    return f;
+}
+
 static fluid_voxel_t* index_voxel(simulation_state_t* ss, int x, int y)
 {
     return &ss->voxels[y * (ss->params->xdim) + x];
@@ -214,10 +221,11 @@ static void stream(simulation_state_t* restrict ss)
         }
     }
 
-#if 1
     // Now handle bounce-back from barriers
     for (int b = 0; b < ss->num_barriers; b++) {
         barrier_t* barrier = &ss->barriers[b];
+
+        float F_barrier[2] = { 0 };
 
         for (int by = 0; by < barrier->ydim; by++) {
             for (int bx = 0; bx < barrier->xdim; bx++) {
@@ -242,27 +250,59 @@ static void stream(simulation_state_t* restrict ss)
                         v->lattice_vectors[LATTICE_DIR_NE];
 
                     // Keep track of stuff needed to plot force vector:
-#if 0
-                    barrierCount++;
-                    barrierxSum += x;
-                    barrierySum += y;
-                    barrierFx += nE[index] + nNE[index] + nSE[index] - nW[index] - nNW[index] - nSW[index];
-                    barrierFy += nN[index] + nNE[index] + nNW[index] - nS[index] - nSE[index] - nSW[index];
-#endif
+                    F_barrier[0] += (v->lattice_vectors[LATTICE_DIR_E] +
+                                     v->lattice_vectors[LATTICE_DIR_NE] +
+                                     v->lattice_vectors[LATTICE_DIR_SE] -
+                                     v->lattice_vectors[LATTICE_DIR_W] -
+                                     v->lattice_vectors[LATTICE_DIR_NW] -
+                                     v->lattice_vectors[LATTICE_DIR_SW]);
+
+                    F_barrier[1] += (v->lattice_vectors[LATTICE_DIR_N] +
+                                     v->lattice_vectors[LATTICE_DIR_NE] +
+                                     v->lattice_vectors[LATTICE_DIR_NW] -
+                                     v->lattice_vectors[LATTICE_DIR_S] -
+                                     v->lattice_vectors[LATTICE_DIR_SE] -
+                                     v->lattice_vectors[LATTICE_DIR_SW]);
                 }
             }
         }
-#endif
+
+        // update the barrier's velocity
+        float k_force[2] = {
+            -(barrier->x - barrier->anchor[0]) * barrier->k[0],
+            -(barrier->y - barrier->anchor[1]) * barrier->k[1]
+        };
+
+        printf("f_barrier = {%9.2f, %9.2f}\n", F_barrier[0], F_barrier[1]);
+        printf("f_spring  = {%9.2f, %9.2f}\n", k_force[0], k_force[1]);
+        printf("barrier_pos = {%9.2f, %9.2f}\n\n", barrier->x, barrier->y);
+
+        if (barrier->k[0] < 1e6)
+            barrier->u[0] += (F_barrier[0] + k_force[0]) / barrier->mass;
+        if (barrier->k[1] < 1e6)
+            barrier->u[1] += (F_barrier[1] + k_force[1]) / barrier->mass;
+    }
+}
+
+static void move_barriers(simulation_state_t* restrict ss)
+{
+    for (int b = 0; b < ss->num_barriers; b++) {
+        barrier_t* barrier = &ss->barriers[b];
+
+        barrier->x = clamp_f(barrier->x + barrier->u[0], 0, ss->params->xdim - barrier->xdim);
+        barrier->y = clamp_f(barrier->y + barrier->u[1], 0, ss->params->ydim - barrier->ydim);
+
+        // TODO: push fluid
     }
 }
 
 void step_simulation_state(simulation_state_t* restrict ss)
 {
+    move_barriers(ss);
+
     // what happens if we set the boundary conditions every single step...?
     collide(ss);
     stream(ss);
-
-    // TODO: move barriers
 
 }
 
@@ -371,10 +411,11 @@ barrier_t* barrier_create_manual(int xdim, int ydim, int x, int y, const bool* o
 
     barr->x = x;
     barr->y = y;
-    barr->x_anchor = x;
-    barr->y_anchor = y;
-    barr->k = 0.0;
-
+    barr->anchor[0] = x;
+    barr->anchor[1] = y;
+    barr->k[0] = 1e8;
+    barr->k[1] = .1;
+    barr->mass = 1000;
     barr->occupancy = calloc(xdim * ydim, sizeof(bool));
     memcpy(barr->occupancy, occupancy, xdim * ydim * sizeof(bool));
 

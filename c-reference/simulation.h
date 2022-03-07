@@ -55,9 +55,14 @@ typedef struct fluid_voxel {
 typedef struct barrier {
     int xdim, ydim;
 
+    // position and velocity
     float x, y;
-    float x_anchor, y_anchor;
-    float k;
+    float u[2];
+    float mass;
+
+    // anchor and spring constant (in 2D)
+    float anchor[2];
+    float k[2];
 
     bool* occupancy;
 } barrier_t;
