@@ -15,13 +15,16 @@ static inline FluidVoxel_t* index_voxel(SimState_t* sim, int x, int y)
 
 FluidsimError_t _simStateAllocOnDevice(SimState_t** d_onDevice, SimParams_t params){
     size_t arrSize = params.dims.x * params.dims.y * sizeof(FluidVoxel_t);
-    FluidVoxel_t* arr;
+    FluidVoxel_t *arr, *arr2;
     cudaMalloc(&arr, arrSize);
+    cudaMalloc(&arr2, arrSize);
 
     SimState_t h_init = {
         .frame = 0,
         .params = params,
-        .voxels = arr
+        .voxels = arr,
+        .d_deviceStatePtr = NULL,
+        ._d_voxels_old = arr2
     };
 
     cudaMalloc(d_onDevice, sizeof(SimState_t));
@@ -47,7 +50,7 @@ FluidsimError_t _simStateCopyToDevice(SimState_t* d_onDevice, SimState_t* h_onHo
         fprintf(
             stderr,
             "ERROR: Simulation size change from (%d x %d) to (%d x %d). "
-            "Simulation state must be re-allocated if the size changes!\n",
+            "Simulation state must be re-initialized if the size changes!\n",
             h_onHost->params.dims.x, h_onHost->params.dims.y, 
             h_onDevice.params.dims.x, h_onDevice.params.dims.y
         );
@@ -57,12 +60,16 @@ FluidsimError_t _simStateCopyToDevice(SimState_t* d_onDevice, SimState_t* h_onHo
                       h_onHost->params.dims.y * 
                       sizeof(FluidVoxel_t);
     cudaMemcpy(h_onDevice.voxels, h_onHost->voxels, arrayLen, cudaMemcpyHostToDevice);
+    cudaMemcpy(h_onDevice._d_voxels_old, h_onHost->voxels, arrayLen, cudaMemcpyHostToDevice);
 
-    // Copy base struct, substituting our new voxel array
+    // Copy base struct, substituting our new voxel array and leaving a few
+    // other values untouched
     SimState_t h_toCopy = {
         .frame = h_onHost->frame,
         .params = h_onHost->params,
-        .voxels = h_onDevice.voxels
+        .voxels = h_onDevice.voxels,
+        .d_deviceStatePtr = NULL,
+        ._d_voxels_old = h_onDevice._d_voxels_old
     };
     cudaMemcpy(d_onDevice, &h_toCopy, sizeof(SimState_t), cudaMemcpyHostToDevice);
 
@@ -150,7 +157,10 @@ FluidsimError_t initSimState(SimParams_t params, SimState_t* h_toInit){
     fseCuChk(cudaPeekAtLastError());
     fseCuChk(cudaDeviceSynchronize());
 
-    return FSE_OK;
+    // Copy-back to host
+    err = _simStateCopyToHost(d_onDevice, h_toInit);
+
+    return err;
 }
 
 FluidsimError_t destroySimState(SimState_t* toDestroy){

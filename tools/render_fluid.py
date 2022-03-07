@@ -28,11 +28,33 @@ import tempfile
 
 
 def to_color(frame):
-    r = frame.max() - frame.min()
-    if (r < 0.1):
-        r = 0.1
+    rMin = 0.0
+    rMax = 20.0
 
-    frame = (frame - frame.min()) / r # guarantees all values [0. 1)
+    # Handle NaN
+    for x, row in enumerate(frame):
+        for y, el in enumerate(row):
+            if math.isnan(el):
+                frame[x][y] = rMin
+
+    # frame[frame == math.inf] = rMax
+    # frame[frame == -1*math.inf] = rMin
+    # frame[math.isnan(frame)] = rMin
+
+    # Restrict to a set range
+    frame[frame < rMin] = rMin
+    frame[frame > rMax] = rMax
+
+    frame /= rMax
+
+    # r = frame.max() - frame.min()
+    # if (r < 0.1):
+    #     r = 0.1
+
+    # frame = (frame - frame.min()) / 3 # guarantees all values [0. 1)
+    # if r != 0:
+    #     frame /= r# guarantees all values [0. 1)
+    #     print(r)
     #frame = np.where(np.isnan(frame), 0, frame)
     # frame = (frame / -3) + 1 # map [0, 1) to (1, 2/3]
     color_size = list(frame.shape)
@@ -136,7 +158,7 @@ if __name__ == "__main__":
             data_offset += field_sizes[i]
 
         # Turn it into a picture and write it to the frame
-        frame = (to_color(frame_data['curl']) * boolean_to_bw(frame_data['barriers'])).astype(np.uint8)
+        frame = (to_color(frame_data['speed']) * boolean_to_bw(frame_data['barriers'])).astype(np.uint8)
         video.write(frame)
 
         frame_count += 1

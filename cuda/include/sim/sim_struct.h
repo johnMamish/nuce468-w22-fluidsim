@@ -32,6 +32,20 @@ typedef struct SimParams {
 } SimParams_t;
 
 #define NUM_LATTICE_VECTORS 9
+#define LV_IP 4
+#define LV_IM 8
+
+#define LV_N  0
+#define LV_NW 1
+#define LV_W  2
+#define LV_SW 3
+#define LV_S  4
+#define LV_SE 5
+#define LV_E  6
+#define LV_NE 7
+#define LV_Z  8
+// NOTE: this doesn't work for the zero vector.
+#define LV_OPPOSITE_DIR_OF(x) ((x + LV_IP) % LV_IM)
 /**
  * @brief A single voxel (actually a pixel since we're in 2D) of fluid.
  *
@@ -55,8 +69,13 @@ typedef struct FluidVoxel {
      */
     union{
         struct __attribute__((__packed__)) {
-            float zero, north, south, east, west,
-                northeast, southeast, northwest, southwest;
+            // NOTE: The exact ordering of vectors here is VERY important, as
+            // it makes it possible to invert a direction (i.e. north -> south,
+            // northeast -> southwest) by using the following calculation:
+            // int newDirIndex = (oldDirIndex + LV_IP) % LV_IM;
+            float north, northwest, west, southwest,
+                  south, southeast, east, northeast,
+                  zero;
         } named;
         float sequence[NUM_LATTICE_VECTORS];
     }lattice_vectors;
@@ -68,11 +87,17 @@ typedef struct FluidVoxel {
 
 /**
  * @brief Simulation state information
- * 
+ *
  * @param frame The current frame of the simulation
  * @param params The parameters of the simulation
  * @param voxels An array of voxels
- * 
+ * @param d_deviceStatePtr Pointer to the address in which the simulation state
+ *                         is stored on the device.
+ *
+ * @param _d_voxels_old This pointer is only valid on device. It is used
+ *                      internally by the Lattice-Boltzmann algorithm, and
+ *                      should never be touched by the host.
+ *
  * N.B. - Barrier information is now encoded within the voxels themselves,
  * rather than in a separate array.
  */
@@ -81,6 +106,7 @@ typedef struct SimState {
     SimParams_t   params;
     FluidVoxel_t* voxels;
     struct SimState* d_deviceStatePtr;
+    FluidVoxel_t* _d_voxels_old;
 } SimState_t;
 
 #define KERNEL_PARAMS SimState_t* state
