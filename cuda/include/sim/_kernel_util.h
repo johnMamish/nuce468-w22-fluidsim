@@ -22,13 +22,13 @@
 static inline __device__ IntPoint_t _voxel_delta_in_direction(int lv_dir){
     switch(lv_dir){
         case LV_N:
-            return (IntPoint_t){ 1,  0};
-        case LV_S:
-            return (IntPoint_t){-1,  0};
-        case LV_E:
             return (IntPoint_t){ 0,  1};
-        case LV_W:
+        case LV_S:
             return (IntPoint_t){ 0, -1};
+        case LV_E:
+            return (IntPoint_t){ 1,  0};
+        case LV_W:
+            return (IntPoint_t){-1,  0};
         case LV_NE:
             return (IntPoint_t){ 1,  1};
         case LV_SE:

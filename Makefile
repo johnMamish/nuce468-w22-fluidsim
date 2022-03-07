@@ -23,7 +23,7 @@ test-cuda: cuda
 	echo "${TC_NOTIF}Testing CUDA implementation${TC_END}"
 	-mkdir -p out/results
 	echo "${TC_RUN} ./out/fluidsim-gpu -o ./out/results/sim-gpu.results${TC_END}"
-	./out/fluidsim-gpu -o ./out/results/sim-gpu.results -l 240 -d "(256,256)" -b "(10,0)"
+	./out/fluidsim-gpu -o ./out/results/sim-gpu.results -l 8192 -d "(256,256)" -b "(.1,-.1)"
 	echo "${TC_RUN} python3 ./tools/render_fluid.py ./out/results/sim-gpu.results ./out/results/sim-gpu.avi${TC_END}"
 	python3 ./tools/render_fluid.py ./out/results/sim-gpu.results ./out/results/sim-gpu.avi
 

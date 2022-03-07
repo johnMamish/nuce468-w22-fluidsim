@@ -199,8 +199,28 @@ FluidsimError_t doFrame(Kernel_t kernel, SimState_t* sim){
     };
 
     // Launch kernel
-    kernel<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
+    // kernel<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
 
+    // Collide
+    NaiveKernel_C<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
+    // Check for errors
+    fseCuChk(cudaPeekAtLastError());
+    fseCuChk(cudaDeviceSynchronize());
+
+    // Exchange
+    NaiveKernel_X<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
+    // Check for errors
+    fseCuChk(cudaPeekAtLastError());
+    fseCuChk(cudaDeviceSynchronize());
+
+    // Stream
+    NaiveKernel_S<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
+    // Check for errors
+    fseCuChk(cudaPeekAtLastError());
+    fseCuChk(cudaDeviceSynchronize());
+
+    // Bounceback
+    NaiveKernel_B<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
     // Check for errors
     fseCuChk(cudaPeekAtLastError());
     fseCuChk(cudaDeviceSynchronize());
@@ -265,8 +285,10 @@ FluidsimError_t writeLogFrame(FILE* f, SimState_t* sim){
             speeds[dex] = sqrt((v->velocity.x * v->velocity.x) + (v->velocity.y * v->velocity.y));
             barriers[dex] = v->is_barrier;
             ++dex;
+            // printf("[ (%d,%d) v=<%f,%f> rho=%f barrier=%s ]\n", x, y, v->velocity.x, v->velocity.y, v->density, v->is_barrier ? "yes" : "no");
         }
     }
+
 
     if(!fwrite(curls,     sizeof(float),   numEntries, f)) return FSE_FILE_IO_FAILURE;
     if(!fwrite(densities, sizeof(float),   numEntries, f)) return FSE_FILE_IO_FAILURE;

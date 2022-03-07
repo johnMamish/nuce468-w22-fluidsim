@@ -8,6 +8,8 @@
 #include <stdbool.h>
 
 __device__ void _collide(SimState_t* state, int myX, int myY){
+    // bool d = myX < state->params.dims.x && myY < state->params.dims.y;
+    // printf("Pixel (%d,%d) Image (%d,%d) Decision %s\n", myX, myY, state->params.dims.x, state->params.dims.y, d ? "run" : "don't run");
     if(myX < state->params.dims.x && myY < state->params.dims.y){
         const float omega = 1.0 / ((3*state->params.viscosity) + 0.5);
 
@@ -59,6 +61,20 @@ __device__ void _stream(SimState_t* state, int myX, int myY){
             1.0f
         );
 
+        if(myX == 0 && myY == 0 && state->frame == 0){
+            printf("Lattice vectors: \n N: %f\n S: %f\n E: %f\n W: %f\nNE: %f\nSE: %f\nNW: %f\nSW: %f\n Z: %f\n\n",
+                edgeCondition.lattice_vectors.named.north,
+                edgeCondition.lattice_vectors.named.south,
+                edgeCondition.lattice_vectors.named.east,
+                edgeCondition.lattice_vectors.named.west,
+                edgeCondition.lattice_vectors.named.northeast,
+                edgeCondition.lattice_vectors.named.southeast,
+                edgeCondition.lattice_vectors.named.northwest,
+                edgeCondition.lattice_vectors.named.southwest,
+                edgeCondition.lattice_vectors.named.zero
+            );
+        }
+
         // ========= Copy lattice vectors =========
         // --> North
         if(myY == 0){
@@ -83,24 +99,24 @@ __device__ void _stream(SimState_t* state, int myX, int myY){
         }
 
         // --> East
-        if(myX == state->params.dims.x - 1){
+        if(myX == 0){
             myVoxel->lattice_vectors.named.east 
                 = edgeCondition.lattice_vectors.named.east;
         }else{
             // Copy from the voxel to the west
             myVoxel->lattice_vectors.named.east
-                = _index_other_voxel(state, myX + 1, myY)
+                = _index_other_voxel(state, myX - 1, myY)
                     -> lattice_vectors.named.east;
         }
 
         // --> West
-        if(myX == 0){
+        if(myX == state->params.dims.x - 1){
             myVoxel->lattice_vectors.named.west
                 = edgeCondition.lattice_vectors.named.west;
         }else{
             // Copy from the voxel to the east
             myVoxel->lattice_vectors.named.west
-                = _index_other_voxel(state, myX - 1, myY)
+                = _index_other_voxel(state, myX + 1, myY)
                     -> lattice_vectors.named.west;
         }
 
@@ -111,7 +127,7 @@ __device__ void _stream(SimState_t* state, int myX, int myY){
         }else{
             // Copy from the voxel to the southwest
             myVoxel->lattice_vectors.named.northeast
-                = _index_other_voxel(state, myX + 1, myY - 1)
+                = _index_other_voxel(state, myX - 1, myY - 1)
                     -> lattice_vectors.named.northeast;
         }
 
@@ -163,10 +179,11 @@ __device__ void _barrierBounceBack(SimState_t* state, int myX, int myY){
                 int targetY = myY + voxelDelta.y;
 
                 // Make sure we're not trying to bounce-back out of bounds
-                if(
+                if(!(
                         targetX < 0 || targetX >= state->params.dims.x
                     || targetY < 0 || targetY >= state->params.dims.y
-                ){
+                )){
+                    
                     // Bounce back
                     _index_voxel(state, targetX, targetY)
                         -> lattice_vectors.sequence[LV_OPPOSITE_DIR_OF(i)]
@@ -175,27 +192,66 @@ __device__ void _barrierBounceBack(SimState_t* state, int myX, int myY){
             }
         }
     }
+
+    if(myX == 0 && myY == 0){
+        ++(state->frame);
+    }
 }
 
-__global__ void NaiveKernel(KERNEL_PARAMS){
+__global__ void NaiveKernel_C(KERNEL_PARAMS){
     // Get pixel ID
     int myX = blockIdx.x * blockDim.x + threadIdx.x;
     int myY = blockIdx.y * blockDim.y + threadIdx.y;
 
     // Collide
     _collide(state, myX, myY);
-    __syncthreads();
+}
 
-    // Swap new/old arrays
+__global__ void NaiveKernel_X(KERNEL_PARAMS){
+    // Get pixel ID
+    int myX = blockIdx.x * blockDim.x + threadIdx.x;
+    int myY = blockIdx.y * blockDim.y + threadIdx.y;
     if((myX | myY) == 0) _swap_new_old_voxel_arrays(state);
-    __syncthreads();
+}
+
+__global__ void NaiveKernel_S(KERNEL_PARAMS){
+    // Get pixel ID
+    int myX = blockIdx.x * blockDim.x + threadIdx.x;
+    int myY = blockIdx.y * blockDim.y + threadIdx.y;
 
     // Stream
     _stream(state, myX, myY);
-    __syncthreads();
+}
+
+__global__ void NaiveKernel_B(KERNEL_PARAMS){
+    // Get pixel ID
+    int myX = blockIdx.x * blockDim.x + threadIdx.x;
+    int myY = blockIdx.y * blockDim.y + threadIdx.y;
 
     // Handle barrier bounce-back
     _barrierBounceBack(state, myX, myY);
     __syncthreads();
 }
+
+// __global__ void NaiveKernel(KERNEL_PARAMS){
+//     // Get pixel ID
+//     int myX = blockIdx.x * blockDim.x + threadIdx.x;
+//     int myY = blockIdx.y * blockDim.y + threadIdx.y;
+
+//     // Collide
+//     _collide(state, myX, myY);
+//     __syncthreads();
+
+//     // Swap new/old arrays
+//     if((myX | myY) == 0) _swap_new_old_voxel_arrays(state);
+//     __syncthreads();
+
+//     // Stream
+//     _stream(state, myX, myY);
+//     __syncthreads();
+
+//     // Handle barrier bounce-back
+//     _barrierBounceBack(state, myX, myY);
+//     __syncthreads();
+// }
 

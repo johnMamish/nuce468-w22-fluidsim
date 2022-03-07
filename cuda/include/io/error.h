@@ -2,6 +2,10 @@
 
 #include <stdlib.h>
 
+#ifndef __device__
+    #define __device__
+#endif
+
 typedef enum FluidsimError{
     FSE_OK = 0,
     FSE_BAD_SIM_STATE = 1,
