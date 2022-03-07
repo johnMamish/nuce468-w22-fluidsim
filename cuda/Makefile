@@ -3,23 +3,26 @@ include ../common.make
 
 PROJ_BASE := ..
 MODULE_BASE := .
+# CUDA_LOC := /usr/local/cuda-11.0/targets/x86_64-linux
 
 # Thanks to https://yuukidach.github.io/2019/08/05/makefile-learning/
 
 TARGET = fluidsim-gpu
 
-CC := nvcc
+LNCC := nvcc
+CC := g++
 CUC := nvcc
-CFLAGS := -g
-CUFLAGS := -g
+CFLAGS := -g -Wall -Werror
+CUFLAGS := -g -Xcompiler -Wall -Xcompiler -Werror -Werror all-warnings
 
 OUT = ${PROJ_BASE}/out
 BUILD = ${MODULE_BASE}/build
 INCLUDE= ${MODULE_BASE}/include
 
-MODULES := src src/sim
+MODULES := src src/sim src/io
 
 INCS = $(wildcard *.h $(foreach fd, $(shell find ${INCLUDE} -type d), $(fd)/*.h))
+LIB_INCS = 
 C_SRCS = $(wildcard *.c $(foreach fd, $(MODULES), $(fd)/*.c))
 CU_SRCS = $(wildcard *.c $(foreach fd, $(MODULES), $(fd)/*.cu))
 NODIR_C_SRC = $(notdir $(C_SRCS))
@@ -28,8 +31,8 @@ OBJS = $(addprefix $(BUILD)/, $(C_SRCS:.c=_cc.o)) $(addprefix $(BUILD)/, $(CU_SR
 LIBS =
 LIB_DIRS =
 
-CFLAGS += $(foreach incl, ${INCLUDE}, -I ${incl})
-CUFLAGS += $(foreach incl, ${INCLUDE}, -I ${incl})
+CFLAGS += $(foreach incl, ${INCLUDE}, -I ${incl}) $(foreach incl, ${LIB_INCS}, -I ${incl})
+CUFLAGS += $(foreach incl, ${INCLUDE}, -I ${incl}) $(foreach incl, ${LIB_INCS}, -I ${incl})
 
 all: ${TARGET}
 
@@ -40,9 +43,9 @@ ${OUT}:
 	-mkdir -p ${OUT}
 
 PHONY := $(TARGET)
-$(TARGET): $(OBJS)
-	echo "${TC_LINK} $(CC) -o $(OUT)/$@ $(OBJS) $(LIB_DIRS) $(LIBS)${TC_END}"
-	$(CC) -o $(OUT)/$@ $(OBJS) $(LIB_DIRS) $(LIBS)
+$(TARGET): $(OBJS) ${OUT}
+	echo "${TC_LINK} $(LNCC) -o $(OUT)/$@ $(OBJS) $(LIB_DIRS) $(LIBS)${TC_END}"
+	$(LNCC) -o $(OUT)/$@ $(OBJS) $(LIB_DIRS) $(LIBS)
 
 $(BUILD)/%_cc.o: %.c $(INCS)
 	echo "${TC_BUILD}$(CC) -o $@ $(CFLAGS) -c $<${TC_END}"
