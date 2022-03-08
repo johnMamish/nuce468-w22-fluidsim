@@ -15,7 +15,8 @@ typedef enum FluidsimError{
     FSE_FILE_IO_FAILURE = 5,
     FSE_OUT_OF_BOUNDS = 6,
 
-    FSE_ASSERTION_FAILURE = -1
+    FSE_ASSERTION_FAILURE = -1,
+    FSE_UNKNOWN = -2,
 } FluidsimError_t;
 
 #define fseAssert(b, msg, ...) {if(!(b)) fseFail(FSE_ASSERTION_FAILURE, msg, ##__VA_ARGS__);}

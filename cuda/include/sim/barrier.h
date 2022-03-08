@@ -27,4 +27,6 @@ static inline FluidsimError_t createBarrier_point(SimState_t* state, IntPoint_t 
  * @param p0 One of the points on the line
  * @param p1 The other point on the line
  */
-FluidsimError_t createBarrier_line(SimState_t* state, FloatPoint_t p0, FloatPoint_t p1);
+FluidsimError_t createBarrier_line(SimState_t* state, IntPoint_t p0, IntPoint_t p1);
+
+FluidsimError_t createBarrier_circle(SimState_t* state, IntPoint_t c, int r);

@@ -5,7 +5,9 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include "sim/sim.h"
+#include <sim/sim_struct.h>
+
+#define MAX_BARRIERS 256
 
 /**
  * @brief Struct used to store CLI arguments for the simulation
@@ -19,10 +21,13 @@
 typedef struct CLIArgs {
     SimParams_t sim;
     int frames;
+    int output_every;
     const char* config_file;
     const char* output_file;
     bool append;
-    struct {bool config_file; bool output_file; bool frames; bool append; bool dims; bool boundary; bool viscosity;} modified;
+    SimBarrier_t* barriers;
+    int barrier_count;
+    struct {bool config_file; bool output_file; bool frames; bool output_every; bool append; bool dims; bool boundary; bool viscosity; bool barriers;} modified;
 } CLIArgs_t;
 
 /**
@@ -43,17 +48,22 @@ const static CLIArgs_t DEFAULT_ARGS = (CLIArgs_t){
         .viscosity = 0.1
     },
     .frames = 750,
+    .output_every = 1,
     .config_file = NULL,
     .output_file = NULL,
     .append = false,
+    .barriers = NULL,
+    .barrier_count = 0,
     .modified = {
         .config_file = false,
         .output_file = false,
         .frames = false,
+        .output_every = false,
         .append = false,
         .dims = false,
         .boundary = false,
-        .viscosity = false
+        .viscosity = false,
+        .barriers = false
     }
 };
 

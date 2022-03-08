@@ -31,9 +31,25 @@ int main(int argc, char** argv){
     fseChk(initLogFile(simFile, cArgs.sim), "Failed to initialize log file.");
 
 
-    // Draw some barriers
-    FloatPoint_t triPoints[] = {{50.0,100.0}, {80.0, 130.0}, {80.0, 70.0}};
-    fseChk_noexit(createBarrier_line(&state, triPoints[0], triPoints[1]), "Error drawing triangle");
+    // Draw barriers
+    printf("%d barriers\n", cArgs.barrier_count);
+    for(int i = 0; i < cArgs.barrier_count; ++i){
+        SimBarrier_t b = cArgs.barriers[i];
+        switch(b.type){
+            case SBT_CIRCLE:{
+                fseChk_noexit(createBarrier_circle(&state, b.circle.c, b.circle.r), "Error drawing CLI shape #%d (circle)\n", i+1);
+            break;}
+            case SBT_LINE:{
+                fseChk_noexit(createBarrier_line(&state, b.line.p1, b.line.p2), "Error drawing CLI shape #%d (line)\n", i+1);
+            break;}
+            default:
+                fseFail_noexit(FSE_UNKNOWN, "Tried to draw unknown barrier type %d for CLI shape #%d\n", b.type, i+1);
+            break;
+        }
+    }
+
+    // FloatPoint_t triPoints[] = {{50.0,100.0}, {80.0, 130.0}, {80.0, 70.0}};
+    // fseChk_noexit(createBarrier_line(&state, triPoints[0], triPoints[1]), "Error drawing triangle");
     // fseChk_noexit(createBarrier_line(&state, triPoints[1], triPoints[2]), "Error drawing triangle");
     // fseChk_noexit(createBarrier_line(&state, triPoints[0], triPoints[2]), "Error drawing triangle");
 
@@ -44,7 +60,7 @@ int main(int argc, char** argv){
     for(int i = 0; i < cArgs.frames; ++i){
         fseChk(doFrame(k, &state), "Failure calculating frame %d", i);
         fseChk(syncSimStateToHost(&state), "Failure synchronizing state to host on frame %d", i);
-        if(i % 10 == 0){
+        if(i % cArgs.output_every == 0){
             fseChk(
                 writeLogFrame(simFile, &state),
                 "Failure writing frame %d to log file", i

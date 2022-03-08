@@ -61,19 +61,19 @@ __device__ void _stream(SimState_t* state, int myX, int myY){
             1.0f
         );
 
-        if(myX == 0 && myY == 0 && state->frame == 0){
-            printf("Lattice vectors: \n N: %f\n S: %f\n E: %f\n W: %f\nNE: %f\nSE: %f\nNW: %f\nSW: %f\n Z: %f\n\n",
-                edgeCondition.lattice_vectors.named.north,
-                edgeCondition.lattice_vectors.named.south,
-                edgeCondition.lattice_vectors.named.east,
-                edgeCondition.lattice_vectors.named.west,
-                edgeCondition.lattice_vectors.named.northeast,
-                edgeCondition.lattice_vectors.named.southeast,
-                edgeCondition.lattice_vectors.named.northwest,
-                edgeCondition.lattice_vectors.named.southwest,
-                edgeCondition.lattice_vectors.named.zero
-            );
-        }
+        // if(myX == 0 && myY == 0 && state->frame == 0){
+        //     printf("Lattice vectors: \n N: %f\n S: %f\n E: %f\n W: %f\nNE: %f\nSE: %f\nNW: %f\nSW: %f\n Z: %f\n\n",
+        //         edgeCondition.lattice_vectors.named.north,
+        //         edgeCondition.lattice_vectors.named.south,
+        //         edgeCondition.lattice_vectors.named.east,
+        //         edgeCondition.lattice_vectors.named.west,
+        //         edgeCondition.lattice_vectors.named.northeast,
+        //         edgeCondition.lattice_vectors.named.southeast,
+        //         edgeCondition.lattice_vectors.named.northwest,
+        //         edgeCondition.lattice_vectors.named.southwest,
+        //         edgeCondition.lattice_vectors.named.zero
+        //     );
+        // }
 
         // ========= Copy lattice vectors =========
         // --> North

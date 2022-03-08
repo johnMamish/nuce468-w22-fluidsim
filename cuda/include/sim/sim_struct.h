@@ -31,6 +31,27 @@ typedef struct SimParams {
     float viscosity;
 } SimParams_t;
 
+struct SimBarrier_line {
+    IntPoint_t p1, p2;
+};
+
+struct SimBarrier_circle {
+    IntPoint_t c;
+    int r;
+};
+
+typedef enum {
+    SBT_CIRCLE,
+    SBT_LINE,
+    SBT_UNKNOWN,
+} SimBarrierType_t;
+
+typedef struct SimBarrier {
+    SimBarrierType_t type;
+    struct SimBarrier_line line;
+    struct SimBarrier_circle circle;
+} SimBarrier_t;
+
 #define NUM_LATTICE_VECTORS 9
 #define LV_IP 4
 #define LV_IM 8
