@@ -10,13 +10,18 @@ static char argp_args_doc[] = "";
 
 static struct argp_option options[] = {
     {"run-len", 'l', "frames", 0, "Number of frames to run the simulator for."},
-    {"config-file", 'c', "cfile", 0, "Location of a json-formatted config file to read simulation parameters from. If not provided, default parameters will be used (except when overridden by CLI options)."},
+    {"output-every", 'L', "frames", 0, "Only write a frame to output every n frames."},
+    // {"config-file", 'c', "cfile", 0, "Location of a json-formatted config file to read simulation parameters from. If not provided, default parameters will be used (except when overridden by CLI options)."},
     {"output", 'o', "ofile", 0, "File to write output data to. By default, this will overwrite any existing file (but see `--append`). If not provided, results will be output to STDOUT."},
     {"append", 'a', 0, 0, "If provided, results will be APPENDED to `output` if the file exists, instead of overwriting the file."},
     {0, 0, 0, OPTION_DOC, "SIMULATION PARAMETERS:"},
     {"dims", 'd', "(xDim, yDim)", 0, "Set the dimensions of the simulation."},
     {"boundary", 'b', "(xVel, yVel)", 0, "Set the 'boundary velocity' vector of the simulation."},
     {"viscosity", 'v', "viscosity", 0, "Set the viscosity of the simulation fluid"},
+    {"barrier", 'B', "(type ...)", 0, "Add a barrier to the simulation. See BARRIER TYPES."},
+    {0, 0, 0, OPTION_DOC, "BARRIER TYPES"},
+    {"(LINE (x1, y1), (x2, y2))", 0, 0, OPTION_DOC, "A direct line between two points (x1, y1) and (x2, y2)."},
+    {"(CIRCLE (xc, yc), r)", 0, 0, OPTION_DOC, "A circle centered at (cx, cy) with radius r"},
     {0}
 };
 
@@ -34,6 +39,21 @@ const char* VEC_FORMATS_FLOAT[] = {
     "(%f,%f)",
     "%f, %f",
     "%f,%f"
+};
+
+const int NUM_BARRIER_FMTS = 10;
+#define BARRIER_STR_LEN 6
+const char* BARRIER_FORMATS[] = {
+    "(%6s (%i, %i), (%i, %i))",
+    "(%6s (%i,%i), (%i,%i))",
+    "(%6s %i, %i, %i, %i)",
+    "(%6s %i,%i, %i,%i)",
+    "(%6s %i,%i,%i,%i)",
+    "(%6s (%i, %i), %i)",
+    "(%6s (%i,%i), %i)",
+    "(%6s %i, %i, %i)",
+    "(%6s %i,%i, %i)",
+    "(%6s %i,%i,%i)",
 };
 
 static inline error_t _parse_int_vector(const char* str, int* x, int* y){
@@ -66,6 +86,35 @@ static inline error_t _parse_float_vector(const char* str, float* x, float* y){
     if(res != 2){
         // Can't figure out how to parse this one. Ignore it.
         return EINVAL;
+    }
+
+    // One of the formats worked.
+    return 0;
+}
+
+static inline error_t _parse_barrier(const char* str, SimBarrierType_t* bType, int* p1, int* p2, int* p3, int* p4){
+    char barrier_type[BARRIER_STR_LEN+1];
+    int res = 0;
+    for(int i = 0; i < NUM_BARRIER_FMTS; ++i){
+        res = sscanf(str, BARRIER_FORMATS[i], &barrier_type[0], p1, p2, p3, p4);
+        if(res > 3) break;
+    }
+
+    if(res <= 3){
+        // Can't figure out how to parse this one. Ignore it.
+        return EINVAL;
+    }
+
+    if(strcmp(&barrier_type[0], "LINE") == 0){
+        *bType = SBT_LINE;
+        if(res != 5) return EINVAL; // Check specific number of values returned
+    }else if(strcmp(&barrier_type[0], "CIRCLE") == 0){
+        *bType = SBT_CIRCLE;
+        if(res != 4) return EINVAL; // Check specific number of values returned
+    }else{
+        *bType = SBT_UNKNOWN;
+        return EINVAL; // If the barrier type doesn't match anything, always
+                       // reject the cli-arg
     }
 
     // One of the formats worked.
@@ -120,6 +169,17 @@ static error_t parse_opt(int key, char* arg, struct argp_state* state){
             simArgs -> modified.frames = true;
         break;}
 
+        case 'L':{
+            int outputEvery;
+            int res = sscanf(arg, "%i", &outputEvery);
+            if(res != 1){
+                argp_usage(state);
+            }
+
+            simArgs -> output_every = outputEvery;
+            simArgs -> modified.output_every = true;
+        break;}
+
         case 'd':{
             int dimX, dimY;
             int res = _parse_int_vector(arg, &dimX, &dimY);
@@ -153,6 +213,34 @@ static error_t parse_opt(int key, char* arg, struct argp_state* state){
             }
             simArgs -> sim.viscosity = visc;
             simArgs -> modified.viscosity = true;
+        break;}
+
+        case 'B':{
+            int p1, p2, p3, p4;
+            SimBarrierType_t bType;
+
+            int res = _parse_barrier(arg, &bType, &p1, &p2, &p3, &p4);
+            if(res != 0 || bType == SBT_UNKNOWN){
+                argp_usage(state); // Can't parse the barrier
+            }
+
+            SimBarrier_t barrier;
+            barrier.type = bType;
+
+            if(bType == SBT_CIRCLE){
+                barrier.circle.c = (IntPoint_t){p1, p2};
+                barrier.circle.r = p3;
+            }else if(bType == SBT_LINE){
+                barrier.line.p1 = (IntPoint_t){p1, p2};
+                barrier.line.p2 = (IntPoint_t){p3, p4};
+            }
+
+            if(simArgs->barriers == NULL){
+                simArgs->barriers = (SimBarrier_t*) malloc(MAX_BARRIERS*sizeof(SimBarrier_t));
+            }
+
+            simArgs->barriers[simArgs->barrier_count] = barrier;
+            ++(simArgs->barrier_count);
         break;}
 
         case ARGP_KEY_ARG:{

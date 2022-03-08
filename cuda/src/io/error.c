@@ -21,6 +21,8 @@ const char* fluidsim_err_to_str(const FluidsimError_t err){
             return "FSE_OUT_OF_BOUNDS";
         case FSE_ASSERTION_FAILURE:
             return "FSE_ASSERTION_FAILURE";
+        case FSE_UNKNOWN:
+            return "FSE_UNKNOWN";
     }
 
     return "UNKNOWN";

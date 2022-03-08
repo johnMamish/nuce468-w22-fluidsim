@@ -19,14 +19,14 @@ __global__ void InitializerKernel(SimState_t* state){
         FluidVoxel_t* v2 = _index_other_voxel(state, myX, myY);
         _setVoxel(
             v, 
-            0.0f,
-            0.0f,
+            state->params.boundary_velocity.x,
+            state->params.boundary_velocity.y,
             1.0
         );
         _setVoxel(
             v2, 
-            0.0f,
-            0.0f,
+            state->params.boundary_velocity.x,
+            state->params.boundary_velocity.y,
             1.0
         );
         // _setVoxel(
