@@ -26,7 +26,7 @@ static inline __device__ FluidVoxel_t* _index_tile_voxel(FluidVoxel_t* tile, int
 
 static __device__ void _collide(SimState_t* state, int myX, int myY, FluidVoxel_t* oldVA){
     if(myX < state->params.dims.x && myY < state->params.dims.y && myX >= 0 && myY >= 0){
-        const float omega = 1.0 / ((3*state->params.viscosity) + 0.5);
+        const float omega = 1.0f / ((3.0f*state->params.viscosity) + 0.5f);
 
         FluidVoxel_t* myVoxel = _index_tile_voxel(oldVA, 0, 0);
 
@@ -40,7 +40,7 @@ static __device__ void _collide(SimState_t* state, int myX, int myY, FluidVoxel_
 
         const static float ux_dirs[] = {0,-1,-1,-1, 0, 1, 1, 1, 0};
         const static float uy_dirs[] = {1, 1, 0,-1,-1,-1, 0, 1, 0};
-        float rho = 0.0, ux = 0.0, uy = 0.0;
+        float rho = 0.0f, ux = 0.0f, uy = 0.0f;
         for(int i = 0; i < NUM_LATTICE_VECTORS; ++i){
             float lv = myVoxel->lattice_vectors.sequence[i];
             rho += lv;
