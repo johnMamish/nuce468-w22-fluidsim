@@ -53,6 +53,7 @@ static void set_voxel(fluid_voxel_t* v, const float* u_0, const float rho_0)
 }
 
 void dump_simulation_state(simulation_state_t* ss) {
+#if 0
     for (int y = 0; y < ss->params->ydim; y++) {
         for (int x = 0; x < ss->params->xdim; x++) {
             printf("%6.4f ", (double)ss->voxels[(y * ss->params->xdim) + x].lattice_vectors[1]);
@@ -60,6 +61,15 @@ void dump_simulation_state(simulation_state_t* ss) {
         printf("\n");
     }
     printf("\n");
+#endif
+
+    int dex = 0;
+    for(int y = 0; y < ss->params->ydim; ++y){
+        for(int x = 0; x < ss->params->xdim; ++x){
+            fluid_voxel_t* v = index_voxel(ss, x, y);
+            printf("[ (%d,%d) v=<%f,%f> rho=%f ]\n", x, y, v->u[0], v->u[1], v->rho);
+        }
+    }
 }
 
 void set_boundary_conditions(simulation_state_t* ss)
@@ -92,10 +102,12 @@ simulation_state_t* simulation_state_create(const simulation_parameters_t* param
     ss->num_barriers = 0;
 
     // initialize the whole thing to the boundary condition
+    float vel[2] = {0.0, 0.0};
     for (int y = 0; y < params->ydim; y++) {
         for (int x = 0; x < params->xdim; x++) {
             fluid_voxel_t* v = index_voxel(ss, x, y);
-            set_voxel(v, ss->params->boundary_velocity, 1.0);
+            //set_voxel(v, ss->params->boundary_velocity, 1.0);
+            set_voxel(v, vel, 1.0);
             v->curl = 0.0;
         }
     }
@@ -137,7 +149,7 @@ static void collide(simulation_state_t* restrict ss)
             v->lattice_vectors[LATTICE_DIR_0]  += omega * ((4. / 9.) * thisrho *
                                                            (1                              - u215) -
                                                            v->lattice_vectors[LATTICE_DIR_0]);
-            v->lattice_vectors[LATTICE_DIR_E]  += omega * ((1. / 9.) * thisrho *
+             v->lattice_vectors[LATTICE_DIR_E]  += omega * ((1. / 9.) * thisrho *
                                                            (1 + ux3       + 4.5*ux2        - u215) -
                                                            v->lattice_vectors[LATTICE_DIR_E]);
             v->lattice_vectors[LATTICE_DIR_W]  += omega * ((1. / 9.) * thisrho *
@@ -273,9 +285,9 @@ static void stream(simulation_state_t* restrict ss)
             -(barrier->y - barrier->anchor[1]) * barrier->k[1]
         };
 
-        printf("f_barrier = {%9.2f, %9.2f}\n", F_barrier[0], F_barrier[1]);
-        printf("f_spring  = {%9.2f, %9.2f}\n", k_force[0], k_force[1]);
-        printf("barrier_pos = {%9.2f, %9.2f}\n\n", barrier->x, barrier->y);
+        //printf("f_barrier = {%9.2f, %9.2f}\n", F_barrier[0], F_barrier[1]);
+        //printf("f_spring  = {%9.2f, %9.2f}\n", k_force[0], k_force[1]);
+        //printf("barrier_pos = {%9.2f, %9.2f}\n\n", barrier->x, barrier->y);
 
         if (barrier->k[0] < 1e6)
             barrier->u[0] += (F_barrier[0] + k_force[0]) / barrier->mass;
@@ -402,7 +414,7 @@ int simulation_state_append_sim_frame_to_log_file(FILE* f, simulation_state_t* s
     return succeeded ? 0 : -1;
 }
 
-barrier_t* barrier_create_manual(int xdim, int ydim, int x, int y, const bool* occupancy)
+barrier_t* barrier_create_manual(int xdim, int ydim, int x, int y, float kx, float ky, float mass, const bool* occupancy)
 {
     barrier_t* barr = calloc(1, sizeof(barrier_t));
 
@@ -413,9 +425,9 @@ barrier_t* barrier_create_manual(int xdim, int ydim, int x, int y, const bool* o
     barr->y = y;
     barr->anchor[0] = x;
     barr->anchor[1] = y;
-    barr->k[0] = 1e8;
-    barr->k[1] = .1;
-    barr->mass = 1000;
+    barr->k[0] = kx;
+    barr->k[1] = ky;
+    barr->mass = mass;
     barr->occupancy = calloc(xdim * ydim, sizeof(bool));
     memcpy(barr->occupancy, occupancy, xdim * ydim * sizeof(bool));
 
@@ -425,6 +437,66 @@ barrier_t* barrier_create_manual(int xdim, int ydim, int x, int y, const bool* o
 barrier_t* barrier_create_rectangle(int width, int height)
 {
     barrier_t* barr = NULL;
+    return barr;
+}
+
+static void draw_line_in_barrier(barrier_t* barr, int x0, int y0, int x1, int y1)
+{
+    float p0_f[2] = {(float)x0, (float)y0};
+    float p1_f[2] = {(float)x1, (float)y1};
+
+    float dx = p1_f[0] - p0_f[0];
+    float dy = p1_f[1] - p0_f[1];
+
+    float steps = abs(dx) > abs(dy) ? abs(dx) : abs(dy);
+
+    float xInc = dx / steps;
+    float yInc = dy / steps;
+
+    float x = p0_f[0];
+    float y = p0_f[1];
+
+    for(int i = 0; i <= steps; ++i) {
+        int px = (int)round(x);
+        int py = (int)round(y);
+        barr->occupancy[py * barr->xdim + px] = true;
+
+        x += xInc;
+        y += yInc;
+    }
+}
+
+barrier_t* barrier_create_lines(const int* points, int npoints, float kx, float ky, float mass)
+{
+    // find min and max points
+    int min[2] = {(1 << 24), (1 << 24)};
+    int max[2] = {-(1 << 24), -(1 << 24)};
+    for (int i = 0; i < npoints; i++) {
+        if (points[2*i] < min[0]) min[0] = points[2*i];
+        if (points[2*i] > max[0]) max[0] = points[2*i];
+        if (points[2*i + 1] < min[1]) min[1] = points[2*i + 1];
+        if (points[2*i + 1] > max[1]) max[1] = points[2*i + 1];
+    }
+
+    // allocate a barrier
+    int xdim = max[0] - min[0] + 1;
+    int ydim = max[1] - min[1] + 1;
+
+    bool* no = calloc(xdim * ydim, sizeof(bool));
+    for (int i = 0; i < xdim * ydim; no[i++] = false);
+    barrier_t* barr = barrier_create_manual(xdim, ydim, min[0], min[1], kx, ky, mass, no);
+    free(no);
+
+    // draw lines
+    for (int i = 0; i < (npoints - 1); i++) {
+        int x0 = points[i * 2] - min[0];
+        int y0 = points[i * 2 + 1] - min[1];
+        int x1 = points[i * 2 + 2] - min[0];
+        int y1 = points[i * 2 + 3] - min[1];
+
+        draw_line_in_barrier(barr, x0, y0, x1, y1);
+    }
+
     return barr;
 }
 

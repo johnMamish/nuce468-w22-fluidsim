@@ -9,7 +9,7 @@ INCLUDE := ../lib/build/include/json-c
 all: $(SOURCES)
 	echo "${TC_BUILD}gcc -g -Ofast -ffast-math -Wall -std=gnu99 -I${INCLUDE} $(SOURCES) -lm -o ../out/fluidsim${TC_END}"
 	-mkdir -p ../out
-	gcc -g -Ofast -ffast-math -Wall -std=gnu99 -I${INCLUDE} $(SOURCES) -lm -o ../out/fluidsim
+	gcc -g -Og -ffast-math -Wall -std=gnu99 -I${INCLUDE} $(SOURCES) -lm -o ../out/fluidsim
 
 clean:
 	-rm fluidsim

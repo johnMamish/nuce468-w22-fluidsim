@@ -108,7 +108,8 @@ int simulation_state_initialize_log_file(FILE* f, simulation_state_t* ss);
 int simulation_state_append_sim_frame_to_log_file(FILE* f, simulation_state_t* ss);
 void set_boundary_conditions(simulation_state_t* ss);
 
-barrier_t* barrier_create_manual(int xdim, int ydim, int x, int y, const bool* occupancy);
+barrier_t* barrier_create_manual(int xdim, int ydim, int x, int y, float kx, float ky, float mass, const bool* occupancy);
+barrier_t* barrier_create_lines(const int* points, int npoints, float kx, float ky, float mass);
 barrier_t* barrier_create_rectangle(int width, int height);
 barrier_t* barrier_create_circle(int width, int height);
 
