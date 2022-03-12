@@ -158,7 +158,7 @@ if __name__ == "__main__":
             data_offset += field_sizes[i]
 
         # Turn it into a picture and write it to the frame
-        frame = (to_color(frame_data['curl']) * boolean_to_bw(frame_data['barriers'])).astype(np.uint8)
+        frame = (to_color(frame_data['speed']) * boolean_to_bw(frame_data['barriers'])).astype(np.uint8)
         video.write(frame)
 
         frame_count += 1

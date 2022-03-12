@@ -187,43 +187,68 @@ FluidsimError_t syncSimStateToDevice(SimState_t* h_onHost){
     return _simStateCopyToDevice(h_onHost->d_deviceStatePtr, h_onHost);
 }
 
-FluidsimError_t doFrame(Kernel_t kernel, SimState_t* sim){
+FluidsimError_t doFrame(KernelSet_t kernel, SimState_t* sim, float* time){
     // Set up CUDA environment
+    int trueTileWidth = kernel.tileWidth - 2*kernel.tileOverlap;
+    int trueTileHeight = kernel.tileHeight - 2*kernel.tileOverlap;
     dim3 dimGrid = {
-        (unsigned int)((sim->params.dims.x + TILE_WIDTH - 1) / TILE_WIDTH), 
-        (unsigned int)((sim->params.dims.y + TILE_WIDTH - 1) / TILE_WIDTH)
+        (unsigned int)((sim->params.dims.x + trueTileWidth - 1) / trueTileWidth), 
+        (unsigned int)((sim->params.dims.y + trueTileHeight - 1) / trueTileHeight)
     };
     dim3 dimBlock = {
-        TILE_WIDTH,
-        TILE_WIDTH
+        kernel.tileWidth,
+        kernel.tileHeight
     };
+    cudaEvent_t start, stop;
+    fseCuChk(cudaEventCreate(&start));
+    fseCuChk(cudaEventCreate(&stop));
 
     // Launch kernel
     // kernel<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
 
-    // Collide
-    NaiveKernel_C<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
-    // Check for errors
-    fseCuChk(cudaPeekAtLastError());
-    fseCuChk(cudaDeviceSynchronize());
+    if(kernel.full){
+        // Run
+        fseCuChk(cudaEventRecord(start));
+        kernel.full<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
+        fseCuChk(cudaEventRecord(stop));
+        // Check for errors
+        fseCuChk(cudaPeekAtLastError());
+        fseCuChk(cudaDeviceSynchronize());
 
-    // Exchange
-    NaiveKernel_X<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
-    // Check for errors
-    fseCuChk(cudaPeekAtLastError());
-    fseCuChk(cudaDeviceSynchronize());
+    }else{
+        // Collide
+        fseCuChk(cudaEventRecord(start));
+        kernel.collide<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
+        // Check for errors
+        fseCuChk(cudaPeekAtLastError());
+        fseCuChk(cudaDeviceSynchronize());
 
-    // Stream
-    NaiveKernel_S<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
-    // Check for errors
-    fseCuChk(cudaPeekAtLastError());
-    fseCuChk(cudaDeviceSynchronize());
+        // Exchange
+        kernel.exchange<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
+        // Check for errors
+        fseCuChk(cudaPeekAtLastError());
+        fseCuChk(cudaDeviceSynchronize());
 
-    // Bounceback
-    NaiveKernel_B<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
-    // Check for errors
-    fseCuChk(cudaPeekAtLastError());
-    fseCuChk(cudaDeviceSynchronize());
+        // Stream
+        kernel.stream<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
+        // Check for errors
+        fseCuChk(cudaPeekAtLastError());
+        fseCuChk(cudaDeviceSynchronize());
+
+        // Bounceback
+        kernel.bounceBack<<<dimGrid, dimBlock>>>(sim->d_deviceStatePtr);
+        fseCuChk(cudaEventRecord(stop));
+        // Check for errors
+        fseCuChk(cudaPeekAtLastError());
+        fseCuChk(cudaDeviceSynchronize());
+    }
+
+    fseCuChk(cudaEventSynchronize(stop));
+
+    if(time != NULL){
+        fseCuChk(cudaEventElapsedTime(time, start, stop));
+    }
+
 
     return FSE_OK;
 }

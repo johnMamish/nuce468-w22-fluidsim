@@ -104,6 +104,7 @@ typedef struct FluidVoxel {
     FloatPoint_t velocity;
     float curl;
     bool is_barrier;
+    int _pad; // Pads struct from 14*4 to 15*4, to avoid shared memory conflicts
 } FluidVoxel_t;
 
 /**
@@ -134,6 +135,11 @@ typedef struct SimState {
 
 typedef void (*Kernel_t)(KERNEL_PARAMS);
 
+typedef struct KernelSet {
+    unsigned int tileWidth, tileHeight, tileOverlap;
+    Kernel_t full, collide, exchange, stream, bounceBack;
+} KernelSet_t;
+
 typedef struct KernelList {
-    Kernel_t naive;
+    KernelSet_t naive, opt1, opt2;
 } KernelList_t;

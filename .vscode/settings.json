@@ -1,11 +1,13 @@
 {
     "cmake.configureOnOpen": false,
     "files.associations": {
-        "*.cu": "c",
+        "*.cu": "cpp",
         "argp.h": "c",
         "handle_args.h": "c",
         "sim.h": "c",
         "stdlib.h": "c",
-        "cuda.h": "c"
+        "cuda.h": "c",
+        "sim_struct.h": "c",
+        "cooperative_groups.h": "c"
     }
 }

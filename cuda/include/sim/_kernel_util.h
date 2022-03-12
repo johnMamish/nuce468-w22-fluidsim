@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#define _VOXEL_IDX(sim,x,y)(y*(sim->params.dims.x) + x)
+#define _VOXEL_IDX(sim,xx,yy)(yy*(sim->params.dims.x) + xx)
 
 /**
  * @brief Gets the (x,y) offsets corresponding to the direction provided

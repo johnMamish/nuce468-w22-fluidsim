@@ -7,19 +7,14 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-__device__ void _collide(SimState_t* state, int myX, int myY){
-    // bool d = myX < state->params.dims.x && myY < state->params.dims.y;
-    // printf("Pixel (%d,%d) Image (%d,%d) Decision %s\n", myX, myY, state->params.dims.x, state->params.dims.y, d ? "run" : "don't run");
+static __device__ void _collide(SimState_t* state, int myX, int myY){
     if(myX < state->params.dims.x && myY < state->params.dims.y){
         const float omega = 1.0 / ((3*state->params.viscosity) + 0.5);
 
         FluidVoxel_t* myVoxel = _index_voxel(state, myX, myY);
-        FluidVoxel_t* myNewVoxel = _index_other_voxel(state, myX, myY);
 
         const static float ux_dirs[] = {0,-1,-1,-1, 0, 1, 1, 1, 0};
         const static float uy_dirs[] = {1, 1, 0,-1,-1,-1, 0, 1, 0};
-        // const static float ux_dirs[] = {0.0, 0.0,  0.0, 1.0, -1.0, 1.0,  1.0, -1.0, -1.0};
-        // const static float uy_dirs[] = {0.0, 1.0, -1.0, 0.0,  0.0, 1.0, -1.0,  1.0, -1.0};
         float rho = 0.0, ux = 0.0, uy = 0.0;
         for(int i = 0; i < NUM_LATTICE_VECTORS; ++i){
             float lv = myVoxel->lattice_vectors.sequence[i];
@@ -39,7 +34,7 @@ __device__ void _collide(SimState_t* state, int myX, int myY){
     }
 }
 
-__device__ void _stream(SimState_t* state, int myX, int myY){
+static __device__ void _stream(SimState_t* state, int myX, int myY){
     if(myX < state->params.dims.x && myY < state->params.dims.y){
         FluidVoxel_t* myVoxel = _index_voxel(state, myX, myY);
         FluidVoxel_t* myOldVoxel = _index_other_voxel(state, myX, myY);
@@ -166,7 +161,7 @@ __device__ void _stream(SimState_t* state, int myX, int myY){
     }
 }
 
-__device__ void _barrierBounceBack(SimState_t* state, int myX, int myY){
+static __device__ void _barrierBounceBack(SimState_t* state, int myX, int myY){
     if(myX < state->params.dims.x && myY < state->params.dims.y){
         FluidVoxel_t* myVoxel = _index_voxel(state, myX, myY);
         if(myVoxel->is_barrier){

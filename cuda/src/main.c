@@ -56,9 +56,12 @@ int main(int argc, char** argv){
     // Note that these changes will not take effect until we call this function
     fseChk(syncSimStateToDevice(&state), "Failed to send state to device");
 
-    Kernel_t k = FluidsimKernels.naive;
+    float avgTime = 0.0f;
+
+    KernelSet_t k = FluidsimKernels.opt1;
     for(int i = 0; i < cArgs.frames; ++i){
-        fseChk(doFrame(k, &state), "Failure calculating frame %d", i);
+        float f;
+        fseChk(doFrame(k, &state, &f), "Failure calculating frame %d", i);
         fseChk(syncSimStateToHost(&state), "Failure synchronizing state to host on frame %d", i);
         if(i % cArgs.output_every == 0){
             fseChk(
@@ -66,6 +69,7 @@ int main(int argc, char** argv){
                 "Failure writing frame %d to log file", i
             );
         }
+        avgTime += f;
     }
 
     // Note that we only attempt to close the log file if it is not STDERR.
@@ -73,5 +77,9 @@ int main(int argc, char** argv){
         fseAssertEq(fclose(simFile), 0, "Could not close output file.");
     }
 
-    print_args(&cArgs);
+    avgTime = avgTime / cArgs.frames;
+
+    printf("Kernel execution time (average): %.3f us\n", avgTime*1000);
+
+    // print_args(&cArgs);
 }

@@ -12,8 +12,8 @@ TARGET = fluidsim-gpu
 LNCC := nvcc
 CC := g++
 CUC := nvcc
-CFLAGS := -g -Wall -Werror
-CUFLAGS := -g -Xcompiler -Wall -Xcompiler -Werror -Werror all-warnings
+CFLAGS := -g -Wall
+CUFLAGS := -g -Xcompiler -Wall
 
 OUT = ${PROJ_BASE}/out
 BUILD = ${MODULE_BASE}/build

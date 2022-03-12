@@ -3,7 +3,7 @@ FROM nvidia/cuda:11.0-devel-ubuntu20.04
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt update
-RUN apt install -y git cmake python3 python3-opencv python3-pil python3-matplotlib gdb
+RUN apt install -y git cmake python3 python3-opencv python3-pil python3-matplotlib gdb libtinfo5 libncursesw5
 
 ENV CUDA_INSTALL_PATH /usr/local/cuda-11.0
 
