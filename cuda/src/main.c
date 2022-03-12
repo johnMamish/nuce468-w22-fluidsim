@@ -58,7 +58,7 @@ int main(int argc, char** argv){
 
     float avgTime = 0.0f;
 
-    KernelSet_t k = FluidsimKernels.opt1;
+    KernelSet_t k = FluidsimKernels.opt2;
     for(int i = 0; i < cArgs.frames; ++i){
         float f;
         fseChk(doFrame(k, &state, &f), "Failure calculating frame %d", i);

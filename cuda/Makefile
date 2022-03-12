@@ -13,7 +13,7 @@ LNCC := nvcc
 CC := g++
 CUC := nvcc
 CFLAGS := -g -Wall
-CUFLAGS := -g -Xcompiler -Wall
+CUFLAGS := -g -G -Xcompiler -Wall
 
 OUT = ${PROJ_BASE}/out
 BUILD = ${MODULE_BASE}/build
