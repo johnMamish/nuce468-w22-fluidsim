@@ -28,11 +28,33 @@ import tempfile
 
 
 def to_color(frame):
+    rMin = 0.0
+    rMax = 0.5
+
+    # Handle NaN
+    for x, row in enumerate(frame):
+        for y, el in enumerate(row):
+            if math.isnan(el):
+                frame[x][y] = 0.0
+
+    # frame[frame == math.inf] = rMax
+    # frame[frame == -1*math.inf] = rMin
+    # frame[math.isnan(frame)] = rMin
+
+    # Restrict to a set range
+    # frame[frame < rMin] = rMin
+    # frame[frame > rMax] = rMax
+
+    # frame /= rMax
+
     r = frame.max() - frame.min()
     if (r < 0.1):
         r = 0.1
 
     frame = (frame - frame.min()) / r # guarantees all values [0. 1)
+    # if r != 0:
+    #     frame /= r# guarantees all values [0. 1)
+    #     print(r)
     #frame = np.where(np.isnan(frame), 0, frame)
     # frame = (frame / -3) + 1 # map [0, 1) to (1, 2/3]
     color_size = list(frame.shape)
