@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define _VOXEL_IDX(sim,xx,yy)(yy*(sim->params.dims.x) + xx)
 
@@ -68,54 +69,54 @@ static inline __device__ void _mod_voxel_lattice_vectors(
     float omega
 ){
     // Calculate intermediate values for lattice vectors
-    float ux_times_3 = 3.0  * xVel;
-    float uy_times_3 = 3.0  * yVel;
+    float ux_times_3 = 3.0f  * xVel;
+    float uy_times_3 = 3.0f  * yVel;
     float ux_squared = xVel * xVel;
     float uy_squared = yVel * yVel;
-    float ux_times_uy_times_2 = xVel * yVel * 2.0;
+    float ux_times_uy_times_2 = xVel * yVel * 2.0f;
     float u_squared = ux_squared + uy_squared;
-    float u_squared_times_150pct = u_squared * 1.5;
+    float u_squared_times_150pct = u_squared * 1.5f;
 
-    float zero_mag = 4.0/9.0;
-    float nesw_mag = 1.0/9.0;
-    float crnr_mag = 1.0/36.0;
+    float zero_mag = 4.0f/9.0f;
+    float nesw_mag = 1.0f/9.0f;
+    float crnr_mag = 1.0f/36.0f;
 
     // Calculate lattice vectors
     v->lattice_vectors.named.zero += omega * (
         zero_mag
-        * (1 - u_squared_times_150pct) 
+        * (1.0f - u_squared_times_150pct) 
         * density 
         - v->lattice_vectors.named.zero);
 
     v->lattice_vectors.named.east  += omega * (
         nesw_mag
-        * (1 + ux_times_3 + 4.5*ux_squared - u_squared_times_150pct) 
+        * (1.0f + ux_times_3 + 4.5f*ux_squared - u_squared_times_150pct) 
         * density 
         - v->lattice_vectors.named.east
     );
     v->lattice_vectors.named.west  += omega * (
         nesw_mag
-        *(1 - ux_times_3 + 4.5*ux_squared - u_squared_times_150pct) 
+        *(1.0f - ux_times_3 + 4.5f*ux_squared - u_squared_times_150pct) 
         * density 
         - v->lattice_vectors.named.west
     );
     v->lattice_vectors.named.north += omega * (
         nesw_mag
-        *(1 + uy_times_3 + 4.5*uy_squared - u_squared_times_150pct) 
+        *(1.0f + uy_times_3 + 4.5f*uy_squared - u_squared_times_150pct) 
         * density 
         - v->lattice_vectors.named.north
     );
     v->lattice_vectors.named.south += omega * (
         nesw_mag
-        *(1 - uy_times_3 + 4.5*uy_squared - u_squared_times_150pct) 
+        *(1.0f - uy_times_3 + 4.5f*uy_squared - u_squared_times_150pct) 
         * density 
         - v->lattice_vectors.named.south
     );
 
     v->lattice_vectors.named.northeast += omega * (
         crnr_mag
-        *(1 + ux_times_3 + uy_times_3 
-            + 4.5*(u_squared + ux_times_uy_times_2) 
+        *(1.0f + ux_times_3 + uy_times_3 
+            + 4.5f*(u_squared + ux_times_uy_times_2) 
             - u_squared_times_150pct
         )
         * density 
@@ -123,24 +124,24 @@ static inline __device__ void _mod_voxel_lattice_vectors(
     );
     v->lattice_vectors.named.southeast += omega * (
         crnr_mag
-        *(1 + ux_times_3 - uy_times_3 
-            + 4.5*(u_squared - ux_times_uy_times_2) 
+        *(1.0f + ux_times_3 - uy_times_3 
+            + 4.5f*(u_squared - ux_times_uy_times_2) 
             - u_squared_times_150pct)
         * density 
         - v->lattice_vectors.named.southeast
     );
     v->lattice_vectors.named.northwest += omega * (
         crnr_mag
-        *(1 - ux_times_3 + uy_times_3 
-            + 4.5*(u_squared - ux_times_uy_times_2) 
+        *(1.0f - ux_times_3 + uy_times_3 
+            + 4.5f*(u_squared - ux_times_uy_times_2) 
             - u_squared_times_150pct)
         * density 
         - v->lattice_vectors.named.northwest
     );
     v->lattice_vectors.named.southwest += omega * (
         crnr_mag
-        *(1 - ux_times_3 - uy_times_3 
-            + 4.5*(u_squared + ux_times_uy_times_2) 
+        *(1.0f - ux_times_3 - uy_times_3 
+            + 4.5f*(u_squared + ux_times_uy_times_2) 
             - u_squared_times_150pct)
         * density 
         - v->lattice_vectors.named.southwest
